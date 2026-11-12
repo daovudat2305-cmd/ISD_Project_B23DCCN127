@@ -1,0 +1,20 @@
+[QUYẾT ĐỊNH 5481/QĐ-BYT - HƯỚNG DẪN CHẨN ĐOÁN VÀ ĐIỀU TRỊ ĐÁI THÁO ĐƯỜNG TÍP 2]
+1. TIÊU CHUẨN CHẨN ĐOÁN XÁC ĐỊNH:
+Chẩn đoán đái tháo đường típ 2 dựa vào một trong 4 tiêu chuẩn lâm sàng sau:
+- Glucose huyết tương lúc đói (Fasting Plasma Glucose - FPG) >= 126 mg/dL (>= 7.0 mmol/L).
+- Glucose huyết tương ở thời điểm 2 giờ sau nghiệm pháp dung nạp glucose đường uống 75g >= 200 mg/dL (>= 11.1 mmol/L).
+- HbA1c >= 6.5% (48 mmol/mol), thực hiện tại phòng xét nghiệm được chuẩn hóa theo chuẩn quốc tế NGSP/DCCT.
+- Bệnh nhân có triệu chứng kinh điển của tăng glucose huyết (tiểu nhiều, khát nhiều, sụt cân không rõ nguyên nhân) kèm theo mức glucose huyết tương ngẫu nhiên >= 200 mg/dL (>= 11.1 mmol/L).
+
+2. PHÁC ĐỒ DƯỢC LÝ VÀ CHỈ ĐỊNH METFORMIN:
+- Metformin là thuốc lựa chọn đầu tay (First-line therapy) cho mọi bệnh nhân đái tháo đường típ 2 ngay khi được chẩn đoán, trừ khi có chống chỉ định tuyệt đối.
+- Liều khởi đầu thông thường là 500 mg hoặc 850 mg uống 1 - 2 lần mỗi ngày trong hoặc sau bữa ăn, chuẩn độ liều dần lên 1500 - 2000 mg/ngày.
+- Hiệu chỉnh liều bắt buộc theo chức năng thận (Độ lọc cầu thận ước tính eGFR):
+  + eGFR >= 45 mL/phút/1.73m²: Có thể sử dụng liều đầy đủ của Metformin (tối đa 2000 mg/ngày), theo dõi định kỳ chức năng thận hàng năm.
+  + eGFR từ 30 đến 44 mL/phút/1.73m² (Suy thận độ 3b): Khuyến cáo giảm 50% liều tối đa (không vượt quá 1000 mg/ngày) và theo dõi sát chức năng thận mỗi 3-6 tháng do nguy cơ tích lũy thuốc và biến chứng nhiễm toan acid lactic (Lactic Acidosis).
+  + eGFR < 30 mL/phút/1.73m² (Suy thận nặng độ 4-5): CHỐNG CHỈ ĐỊNH TUYỆT ĐỐI Metformin. Bắt buộc ngừng thuốc ngay và chuyển sang phác đồ Insulin hoặc nhóm thuốc không bài tiết qua thận.
+
+3. ƯU TIÊN PHỐI HỢP THUỐC TRÊN BỆNH NHÂN CÓ NGUY CƠ TIM - THẬN:
+- Đối với bệnh nhân đái tháo đường típ 2 có suy giảm chức năng thận (eGFR 20 - 60 mL/phút) hoặc có bệnh tim mạch do xơ vữa, suy tim kèm theo:
+- Ưu tiên phối hợp sớm nhóm thuốc ức chế kênh đồng vận chuyển Natri-Glucose 2 (SGLT2 Inhibitor như Empagliflozin 10-25mg hoặc Dapagliflozin 10mg) độc lập với mức HbA1c ban đầu nhằm làm chậm tiến triển suy thận và giảm tỷ lệ tử vong do tim mạch.
+

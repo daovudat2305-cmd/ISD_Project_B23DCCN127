@@ -1,0 +1,33 @@
+﻿subject,subject_label,subject_type,relation,rel_label,object,object_label,object_type,category,source
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,caused_by,Gây ra bởi,Insulin_Resistance,Kháng Insulin mô ngoại vi,Pathology,Etiology,Vinmec Endocrinology Guide
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,caused_by,Gây ra bởi,Beta_Cell_Dysfunction,Suy giảm tế bào Beta tụy,Pathology,Etiology,Vinmec Endocrinology Guide
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,diagnosed_by,Chẩn đoán xác định bởi,HbA1c_ge_6.5,HbA1c >= 6.5%,Biomarker,Diagnostic,Vinmec / BYT 5481
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,diagnosed_by,Chẩn đoán xác định bởi,Fasting_Glucose_ge_126,Đường huyết đói >= 126 mg/dL,Biomarker,Diagnostic,Vinmec / BYT 5481
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,diagnosed_by,Chẩn đoán xác định bởi,OGTT_2h_ge_200,Nghiệm pháp OGTT 2h >= 200 mg/dL,Biomarker,Diagnostic,Vinmec / ADA 2024
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,diagnosed_by,Chẩn đoán xác định bởi,Random_Glucose_ge_200,Glucose ngẫu nhiên >= 200 mg/dL,Biomarker,Diagnostic,Vinmec Diagnostic Criteria
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_symptom,Có triệu chứng,Polyuria,Tiểu nhiều (đặc biệt về đêm),Symptom,Symptom,Vinmec 4-P Symptoms
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_symptom,Có triệu chứng,Polydipsia,Khát nước nhiều liên tục,Symptom,Symptom,Vinmec 4-P Symptoms
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_symptom,Có triệu chứng,Polyphagia,Ăn nhiều (mau đói tế bào),Symptom,Symptom,Vinmec 4-P Symptoms
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_symptom,Có triệu chứng,Weight_Loss,Sụt cân nhanh bất thường,Symptom,Symptom,Vinmec 4-P Symptoms
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_symptom,Có triệu chứng,Blurred_Vision,Nhìn mờ thể thủy tinh,Symptom,Symptom,Vinmec Clinical Examination
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_symptom,Có triệu chứng,Fatigue,Mệt mỏi suy nhược mạn tính,Symptom,Symptom,Vinmec Clinical Examination
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_risk_factor,Có yếu tố nguy cơ,Obesity_BMI_ge_23,Thừa cân/Béo phì (BMI >= 23),RiskFactor,RiskFactor,Vinmec Asian Criteria
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_risk_factor,Có yếu tố nguy cơ,Hypertension,Tăng huyết áp (>=140/90 mmHg),RiskFactor,RiskFactor,Vinmec Screening Protocol
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_risk_factor,Có yếu tố nguy cơ,Family_History,Tiền sử gia đình trực hệ,RiskFactor,RiskFactor,Vinmec Screening Protocol
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,has_risk_factor,Có yếu tố nguy cơ,Sedentary_Lifestyle,Lối sống ít vận động,RiskFactor,RiskFactor,Vinmec Screening Protocol
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,causes_complication,Gây biến chứng,Diabetic_Nephropathy,Bệnh thận đái tháo đường (Suy thận),Complication,Complication,Vinmec Complications Report
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,causes_complication,Gây biến chứng,Diabetic_Retinopathy,Bệnh võng mạc tiểu đường,Complication,Complication,Vinmec Complications Report
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,causes_complication,Gây biến chứng,Cardiovascular_Disease,Biến cố tim mạch & Đột quỵ,Complication,Complication,Vinmec Complications Report
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,causes_complication,Gây biến chứng,Diabetic_Foot_Ulcer,Loét bàn chân tiểu đường (Nguy cơ đoạn chi),Complication,Complication,Vinmec Wound Care Unit
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,treated_by,Điều trị bước đầu bằng,Metformin_First_Line,Metformin (Glucophage),Medication,Treatment,Vinmec Pharmacotherapy
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,treated_by,Ưu tiên phối hợp,SGLT2_Inhibitor_Empagliflozin,Empagliflozin (Ức chế SGLT2),Medication,Treatment,Vinmec Pharmacotherapy
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,treated_by,Điều trị phối hợp,Sulfonylurea_Gliclazide,Gliclazide (Sulfonylurea),Medication,Treatment,Vinmec Pharmacotherapy
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,treated_by,Liệu pháp tiêm,Insulin_Glargine,Insulin Glargine (Nền),Medication,Treatment,Vinmec Pharmacotherapy
+Metformin_First_Line,Metformin (Glucophage),Medication,dose_reduction_when,Giảm 50% liều khi,eGFR_30_to_45_mL_min,eGFR 30 - 45 mL/phút (Suy thận vừa),Biomarker,SafetyRule,Vinmec Safety Alert
+Metformin_First_Line,Metformin (Glucophage),Medication,contraindicated_with,Chống chỉ định tuyệt đối với,Severe_Renal_Impairment_eGFR_lt_30,eGFR < 30 mL/phút (Suy thận nặng),Biomarker,SafetyRule,Vinmec / BYT 5481 Alert
+SGLT2_Inhibitor_Empagliflozin,Empagliflozin (Ức chế SGLT2),Medication,proven_benefit,Lợi ích đã chứng minh,Renal_and_Heart_Failure_Protection,Bảo vệ thận và giảm suy tim,Intervention,ClinicalBenefit,Vinmec Cardio-Renal Evidence
+Hypertension,Tăng huyết áp,Disease,treated_by,Điều trị ưu tiên bằng,ACE_Inhibitor,Thuốc ức chế men chuyển (ACEi),Medication,Treatment,Vinmec Hypertension Protocol
+ACE_Inhibitor,Thuốc ức chế men chuyển (ACEi),Medication,proven_benefit,Lợi ích đã chứng minh,Renal_Hemodynamic_Protection,Bảo vệ huyết động màng lọc cầu thận,Intervention,ClinicalBenefit,Vinmec Nephrology Guidelines
+Severe_Renal_Impairment_eGFR_lt_30,eGFR < 30 mL/phút,Biomarker,requires,Bắt buộc chuyển sang,Insulin_Therapy,Phác đồ Insulin kiểm soát tích cực,Intervention,ClinicalAction,Vinmec Clinical Safety
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,managed_by,Quản lý lối sống bằng,Low_GI_Diet_Plan,Chế độ ăn giảm 35% tinh bột GI cao,Intervention,Lifestyle,Vinmec Nutrition Department
+Diabetes_Type_2,Đái tháo đường Típ 2,Disease,managed_by,Quản lý lối sống bằng,Brisk_Walking_30min,Đi bộ nhanh 30 phút sau bữa ăn chính,Intervention,Lifestyle,Vinmec Rehabilitation

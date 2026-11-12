@@ -1,0 +1,44 @@
+[TÀI LIỆU CHUYÊN KHOA NỘI TIẾT - BỆNH VIỆN ĐA KHOA QUỐC TẾ VINMEC]
+Nguồn: Vinmec International Hospital - Chuyên mục "Bệnh Đái tháo đường típ 2: Nguyên nhân, Triệu chứng, Chẩn đoán và Điều trị"
+
+1. ĐỊNH NGHĨA VÀ NGUYÊN NHÂN BỆNH SINH:
+Bệnh đái tháo đường típ 2 (tiểu đường không phụ thuộc insulin) là tình trạng rối loạn chuyển hóa đặc trưng bởi lượng đường (glucose) trong máu luôn ở mức cao hơn bình thường. Nguyên nhân cốt lõi là do tình trạng kháng insulin (Insulin Resistance) ở các mô ngoại vi (gan, cơ, mô mỡ), kết hợp với sự suy giảm tiến triển chức năng tiết insulin của tế bào beta đảo tụy.
+
+2. CÁC YẾU SỐ NGUY CƠ CAO (THEO KHUYẾN CÁO VINMEC):
+- Béo phì hoặc thừa cân (chỉ số BMI >= 23 kg/m² theo chuẩn người châu Á, hoặc vòng eo >= 90 cm ở nam, >= 80 cm ở nữ).
+- Tiền sử gia đình có người trực hệ (bố, mẹ, anh chị em ruột) mắc đái tháo đường.
+- Ít vận động thể lực, lối sống tĩnh tại.
+- Tăng huyết áp (Huyết áp >= 140/90 mmHg hoặc đang điều trị thuốc hạ áp).
+- Rối loạn lipid máu (Triglyceride > 2.8 mmol/L hoặc HDL-C < 0.9 mmol/L).
+- Tiền sử đái tháo đường thai kỳ hoặc sinh con nặng trên 4.0 kg.
+
+3. TRIỆU CHỨNG LÂM SÀNG KINH ĐIỂN ("HỘI CHỨNG 4 NHIỀU"):
+- Tiểu nhiều (Polyuria): Đường trong máu cao vượt ngưỡng tái hấp thu của thận, kéo theo nước qua cơ chế lợi niệu thẩm thấu, đặc biệt tiểu đêm nhiều lần.
+- Khát nhiều (Polydipsia): Do mất nước qua đường tiểu, trung tâm khát ở não bị kích thích, bệnh nhân liên tục muốn uống nước.
+- Ăn nhiều (Polyphagia): Do tế bào không hấp thu được glucose để tạo năng lượng, cơ thể luôn ở trong tình trạng "đói tế bào".
+- Sụt cân nhanh (Unexplained Weight Loss): Cơ thể phải dị hóa tiêu hủy protein từ cơ bắp và lipid từ mô mỡ để bù đắp năng lượng thiếu hụt.
+- Các triệu chứng khác: Nhìn mờ (thay đổi độ cong thủy tinh thể do tăng áp lực thẩm thấu), mệt mỏi suy nhược kéo dài, vết thương lâu lành, tê bì dị cảm đầu chi.
+
+4. TIÊU CHUẨN CHẨN ĐOÁN XÁC ĐỊNH (VINMEC ÁP DỤNG THEO BỘ Y TẾ VÀ ADA):
+Thực hiện xét nghiệm máu tĩnh mạch đạt 1 trong 4 tiêu chuẩn:
+- Đường huyết lúc đói (Fasting Plasma Glucose) >= 126 mg/dL (7.0 mmol/L) sau nhịn ăn ít nhất 8 tiếng.
+- Đường huyết 2 giờ sau khi làm nghiệm pháp dung nạp 75g glucose đường uống (OGTT) >= 200 mg/dL (11.1 mmol/L).
+- Chỉ số HbA1c >= 6.5% (48 mmol/mol).
+- Đường huyết bất kỳ >= 200 mg/dL (11.1 mmol/L) ở người có triệu chứng kinh điển của tăng đường huyết cấp.
+
+5. CÁC BIẾN CHỨNG NGUY HIỂM:
+- Biến chứng cấp tính: Hôn mê do nhiễm toan ceton đái tháo đường (DKA), Hôn mê tăng áp lực thẩm thấu (HHS), Hạ đường huyết nặng do dùng thuốc quá liều (Glucose < 70 mg/dL).
+- Biến chứng mạn tính mạch máu nhỏ: Bệnh thận đái tháo đường (Diabetic Nephropathy dẫn tới suy thận mạn), Bệnh võng mạc tiểu đường (Diabetic Retinopathy gây mù lòa), Bệnh thần kinh ngoại biên (tê bì mất cảm giác).
+- Biến chứng mạch máu lớn: Xơ vữa động mạch, Nhồi máu cơ tim, Đột quỵ não, Bệnh động mạch chi dưới dẫn tới loét bàn chân đái tháo đường (Diabetic Foot Ulcer) có nguy cơ đoạn chi.
+
+6. NGUYÊN TẮC ĐIỀU TRỊ VÀ DƯỢC LÝ TẠI VINMEC:
+- Thuốc đầu tay: Metformin (nhóm Biguanide) - giảm sản xuất glucose tại gan và tăng nhạy cảm insulin ở ngoại vi. Tuy nhiên, bệnh nhân cần kiểm tra độ lọc cầu thận (eGFR):
+  + Nếu eGFR từ 30 - 44 mL/phút: Giảm 50% liều, tối đa 1000 mg/ngày.
+  + Nếu eGFR < 30 mL/phút: Chống chỉ định tuyệt đối vì nguy cơ nhiễm toan acid lactic gây tử vong.
+- Nhóm thuốc ức chế SGLT2 (Empagliflozin, Dapagliflozin): Tăng thải trừ glucose qua nước tiểu, đặc biệt có lợi ích bảo vệ thận và giảm tỷ lệ suy tim, tử vong tim mạch.
+- Nhóm ức chế men chuyển (ACEi) hoặc chẹn thụ thể ARB: Ưu tiên dùng khi bệnh nhân có tăng huyết áp hoặc có đạm niệu (microalbuminuria) để bảo vệ màng lọc cầu thận.
+- Liệu pháp Insulin: Bắt buộc khi suy tụy nặng, eGFR < 30 mL/phút, hoặc khi đường huyết không kiểm soát được bằng thuốc uống.
+- Chế độ dinh dưỡng và lối sống Vinmec khuyến nghị:
+  + Giảm lượng carbohydrate có chỉ số GI cao (cơm trắng, bánh kẹo, nước ngọt), tăng chất xơ hòa tan.
+  + Thể dục nhịp điệu (aerobic) tối thiểu 150 phút/tuần, đi bộ nhanh 30 phút sau bữa ăn chính để tăng tiêu thụ glucose độc lập với insulin.
+

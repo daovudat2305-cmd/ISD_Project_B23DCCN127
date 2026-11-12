@@ -1,0 +1,533 @@
+{
+  "metadata": {
+    "title": "Clinical Diabetes Knowledge Graph (Vinmec Medical Source)",
+    "version": "2.0",
+    "hospital_source": "Bệnh viện Đa khoa Quốc tế Vinmec - Khoa Nội tiết",
+    "num_nodes": 33,
+    "num_edges": 32
+  },
+  "nodes": [
+    {
+      "id": "Diabetes_Type_2",
+      "label": "Đái tháo đường Típ 2",
+      "group": "Disease",
+      "category": "Etiology",
+      "color": "#FF4B4B",
+      "size": 28
+    },
+    {
+      "id": "Insulin_Resistance",
+      "label": "Kháng Insulin mô ngoại vi",
+      "group": "Pathology",
+      "category": "Etiology",
+      "color": "#54A0FF",
+      "size": 18
+    },
+    {
+      "id": "Beta_Cell_Dysfunction",
+      "label": "Suy giảm tế bào Beta tụy",
+      "group": "Pathology",
+      "category": "Etiology",
+      "color": "#54A0FF",
+      "size": 18
+    },
+    {
+      "id": "HbA1c_ge_6.5",
+      "label": "HbA1c >= 6.5%",
+      "group": "Biomarker",
+      "category": "Diagnostic",
+      "color": "#00D2D3",
+      "size": 22
+    },
+    {
+      "id": "Fasting_Glucose_ge_126",
+      "label": "Đường huyết đói >= 126 mg/dL",
+      "group": "Biomarker",
+      "category": "Diagnostic",
+      "color": "#00D2D3",
+      "size": 22
+    },
+    {
+      "id": "OGTT_2h_ge_200",
+      "label": "Nghiệm pháp OGTT 2h >= 200 mg/dL",
+      "group": "Biomarker",
+      "category": "Diagnostic",
+      "color": "#00D2D3",
+      "size": 22
+    },
+    {
+      "id": "Random_Glucose_ge_200",
+      "label": "Glucose ngẫu nhiên >= 200 mg/dL",
+      "group": "Biomarker",
+      "category": "Diagnostic",
+      "color": "#00D2D3",
+      "size": 22
+    },
+    {
+      "id": "Polyuria",
+      "label": "Tiểu nhiều (đặc biệt về đêm)",
+      "group": "Symptom",
+      "category": "Symptom",
+      "color": "#FFA801",
+      "size": 18
+    },
+    {
+      "id": "Polydipsia",
+      "label": "Khát nước nhiều liên tục",
+      "group": "Symptom",
+      "category": "Symptom",
+      "color": "#FFA801",
+      "size": 18
+    },
+    {
+      "id": "Polyphagia",
+      "label": "Ăn nhiều (mau đói tế bào)",
+      "group": "Symptom",
+      "category": "Symptom",
+      "color": "#FFA801",
+      "size": 18
+    },
+    {
+      "id": "Weight_Loss",
+      "label": "Sụt cân nhanh bất thường",
+      "group": "Symptom",
+      "category": "Symptom",
+      "color": "#FFA801",
+      "size": 18
+    },
+    {
+      "id": "Blurred_Vision",
+      "label": "Nhìn mờ thể thủy tinh",
+      "group": "Symptom",
+      "category": "Symptom",
+      "color": "#FFA801",
+      "size": 18
+    },
+    {
+      "id": "Fatigue",
+      "label": "Mệt mỏi suy nhược mạn tính",
+      "group": "Symptom",
+      "category": "Symptom",
+      "color": "#FFA801",
+      "size": 18
+    },
+    {
+      "id": "Obesity_BMI_ge_23",
+      "label": "Thừa cân/Béo phì (BMI >= 23)",
+      "group": "RiskFactor",
+      "category": "RiskFactor",
+      "color": "#FF6B6B",
+      "size": 18
+    },
+    {
+      "id": "Hypertension",
+      "label": "Tăng huyết áp (>=140/90 mmHg)",
+      "group": "RiskFactor",
+      "category": "RiskFactor",
+      "color": "#FF6B6B",
+      "size": 18
+    },
+    {
+      "id": "Family_History",
+      "label": "Tiền sử gia đình trực hệ",
+      "group": "RiskFactor",
+      "category": "RiskFactor",
+      "color": "#FF6B6B",
+      "size": 18
+    },
+    {
+      "id": "Sedentary_Lifestyle",
+      "label": "Lối sống ít vận động",
+      "group": "RiskFactor",
+      "category": "RiskFactor",
+      "color": "#FF6B6B",
+      "size": 18
+    },
+    {
+      "id": "Diabetic_Nephropathy",
+      "label": "Bệnh thận đái tháo đường (Suy thận)",
+      "group": "Complication",
+      "category": "Complication",
+      "color": "#A4B0BE",
+      "size": 18
+    },
+    {
+      "id": "Diabetic_Retinopathy",
+      "label": "Bệnh võng mạc tiểu đường",
+      "group": "Complication",
+      "category": "Complication",
+      "color": "#A4B0BE",
+      "size": 18
+    },
+    {
+      "id": "Cardiovascular_Disease",
+      "label": "Biến cố tim mạch & Đột quỵ",
+      "group": "Complication",
+      "category": "Complication",
+      "color": "#A4B0BE",
+      "size": 18
+    },
+    {
+      "id": "Diabetic_Foot_Ulcer",
+      "label": "Loét bàn chân tiểu đường (Nguy cơ đoạn chi)",
+      "group": "Complication",
+      "category": "Complication",
+      "color": "#A4B0BE",
+      "size": 18
+    },
+    {
+      "id": "Metformin_First_Line",
+      "label": "Metformin (Glucophage)",
+      "group": "Medication",
+      "category": "Treatment",
+      "color": "#2E86DE",
+      "size": 22
+    },
+    {
+      "id": "SGLT2_Inhibitor_Empagliflozin",
+      "label": "Empagliflozin (Ức chế SGLT2)",
+      "group": "Medication",
+      "category": "Treatment",
+      "color": "#2E86DE",
+      "size": 22
+    },
+    {
+      "id": "Sulfonylurea_Gliclazide",
+      "label": "Gliclazide (Sulfonylurea)",
+      "group": "Medication",
+      "category": "Treatment",
+      "color": "#2E86DE",
+      "size": 22
+    },
+    {
+      "id": "Insulin_Glargine",
+      "label": "Insulin Glargine (Nền)",
+      "group": "Medication",
+      "category": "Treatment",
+      "color": "#2E86DE",
+      "size": 22
+    },
+    {
+      "id": "eGFR_30_to_45_mL_min",
+      "label": "eGFR 30 - 45 mL/phút (Suy thận vừa)",
+      "group": "Biomarker",
+      "category": "SafetyRule",
+      "color": "#00D2D3",
+      "size": 22
+    },
+    {
+      "id": "Severe_Renal_Impairment_eGFR_lt_30",
+      "label": "eGFR < 30 mL/phút (Suy thận nặng)",
+      "group": "Biomarker",
+      "category": "SafetyRule",
+      "color": "#00D2D3",
+      "size": 22
+    },
+    {
+      "id": "Renal_and_Heart_Failure_Protection",
+      "label": "Bảo vệ thận và giảm suy tim",
+      "group": "Intervention",
+      "category": "ClinicalBenefit",
+      "color": "#10AC84",
+      "size": 18
+    },
+    {
+      "id": "ACE_Inhibitor",
+      "label": "Thuốc ức chế men chuyển (ACEi)",
+      "group": "Medication",
+      "category": "Treatment",
+      "color": "#2E86DE",
+      "size": 22
+    },
+    {
+      "id": "Renal_Hemodynamic_Protection",
+      "label": "Bảo vệ huyết động màng lọc cầu thận",
+      "group": "Intervention",
+      "category": "ClinicalBenefit",
+      "color": "#10AC84",
+      "size": 18
+    },
+    {
+      "id": "Insulin_Therapy",
+      "label": "Phác đồ Insulin kiểm soát tích cực",
+      "group": "Intervention",
+      "category": "ClinicalAction",
+      "color": "#10AC84",
+      "size": 18
+    },
+    {
+      "id": "Low_GI_Diet_Plan",
+      "label": "Chế độ ăn giảm 35% tinh bột GI cao",
+      "group": "Intervention",
+      "category": "Lifestyle",
+      "color": "#10AC84",
+      "size": 18
+    },
+    {
+      "id": "Brisk_Walking_30min",
+      "label": "Đi bộ nhanh 30 phút sau bữa ăn chính",
+      "group": "Intervention",
+      "category": "Lifestyle",
+      "color": "#10AC84",
+      "size": 18
+    }
+  ],
+  "links": [
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Insulin_Resistance",
+      "relation": "caused_by",
+      "label": "Gây ra bởi",
+      "category": "Etiology",
+      "source_doc": "Vinmec Endocrinology Guide"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Beta_Cell_Dysfunction",
+      "relation": "caused_by",
+      "label": "Gây ra bởi",
+      "category": "Etiology",
+      "source_doc": "Vinmec Endocrinology Guide"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "HbA1c_ge_6.5",
+      "relation": "diagnosed_by",
+      "label": "Chẩn đoán xác định bởi",
+      "category": "Diagnostic",
+      "source_doc": "Vinmec / BYT 5481"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Fasting_Glucose_ge_126",
+      "relation": "diagnosed_by",
+      "label": "Chẩn đoán xác định bởi",
+      "category": "Diagnostic",
+      "source_doc": "Vinmec / BYT 5481"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "OGTT_2h_ge_200",
+      "relation": "diagnosed_by",
+      "label": "Chẩn đoán xác định bởi",
+      "category": "Diagnostic",
+      "source_doc": "Vinmec / ADA 2024"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Random_Glucose_ge_200",
+      "relation": "diagnosed_by",
+      "label": "Chẩn đoán xác định bởi",
+      "category": "Diagnostic",
+      "source_doc": "Vinmec Diagnostic Criteria"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Polyuria",
+      "relation": "has_symptom",
+      "label": "Có triệu chứng",
+      "category": "Symptom",
+      "source_doc": "Vinmec 4-P Symptoms"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Polydipsia",
+      "relation": "has_symptom",
+      "label": "Có triệu chứng",
+      "category": "Symptom",
+      "source_doc": "Vinmec 4-P Symptoms"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Polyphagia",
+      "relation": "has_symptom",
+      "label": "Có triệu chứng",
+      "category": "Symptom",
+      "source_doc": "Vinmec 4-P Symptoms"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Weight_Loss",
+      "relation": "has_symptom",
+      "label": "Có triệu chứng",
+      "category": "Symptom",
+      "source_doc": "Vinmec 4-P Symptoms"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Blurred_Vision",
+      "relation": "has_symptom",
+      "label": "Có triệu chứng",
+      "category": "Symptom",
+      "source_doc": "Vinmec Clinical Examination"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Fatigue",
+      "relation": "has_symptom",
+      "label": "Có triệu chứng",
+      "category": "Symptom",
+      "source_doc": "Vinmec Clinical Examination"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Obesity_BMI_ge_23",
+      "relation": "has_risk_factor",
+      "label": "Có yếu tố nguy cơ",
+      "category": "RiskFactor",
+      "source_doc": "Vinmec Asian Criteria"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Hypertension",
+      "relation": "has_risk_factor",
+      "label": "Có yếu tố nguy cơ",
+      "category": "RiskFactor",
+      "source_doc": "Vinmec Screening Protocol"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Family_History",
+      "relation": "has_risk_factor",
+      "label": "Có yếu tố nguy cơ",
+      "category": "RiskFactor",
+      "source_doc": "Vinmec Screening Protocol"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Sedentary_Lifestyle",
+      "relation": "has_risk_factor",
+      "label": "Có yếu tố nguy cơ",
+      "category": "RiskFactor",
+      "source_doc": "Vinmec Screening Protocol"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Diabetic_Nephropathy",
+      "relation": "causes_complication",
+      "label": "Gây biến chứng",
+      "category": "Complication",
+      "source_doc": "Vinmec Complications Report"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Diabetic_Retinopathy",
+      "relation": "causes_complication",
+      "label": "Gây biến chứng",
+      "category": "Complication",
+      "source_doc": "Vinmec Complications Report"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Cardiovascular_Disease",
+      "relation": "causes_complication",
+      "label": "Gây biến chứng",
+      "category": "Complication",
+      "source_doc": "Vinmec Complications Report"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Diabetic_Foot_Ulcer",
+      "relation": "causes_complication",
+      "label": "Gây biến chứng",
+      "category": "Complication",
+      "source_doc": "Vinmec Wound Care Unit"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Metformin_First_Line",
+      "relation": "treated_by",
+      "label": "Điều trị bước đầu bằng",
+      "category": "Treatment",
+      "source_doc": "Vinmec Pharmacotherapy"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "SGLT2_Inhibitor_Empagliflozin",
+      "relation": "treated_by",
+      "label": "Ưu tiên phối hợp",
+      "category": "Treatment",
+      "source_doc": "Vinmec Pharmacotherapy"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Sulfonylurea_Gliclazide",
+      "relation": "treated_by",
+      "label": "Điều trị phối hợp",
+      "category": "Treatment",
+      "source_doc": "Vinmec Pharmacotherapy"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Insulin_Glargine",
+      "relation": "treated_by",
+      "label": "Liệu pháp tiêm",
+      "category": "Treatment",
+      "source_doc": "Vinmec Pharmacotherapy"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Low_GI_Diet_Plan",
+      "relation": "managed_by",
+      "label": "Quản lý lối sống bằng",
+      "category": "Lifestyle",
+      "source_doc": "Vinmec Nutrition Department"
+    },
+    {
+      "source": "Diabetes_Type_2",
+      "target": "Brisk_Walking_30min",
+      "relation": "managed_by",
+      "label": "Quản lý lối sống bằng",
+      "category": "Lifestyle",
+      "source_doc": "Vinmec Rehabilitation"
+    },
+    {
+      "source": "Hypertension",
+      "target": "ACE_Inhibitor",
+      "relation": "treated_by",
+      "label": "Điều trị ưu tiên bằng",
+      "category": "Treatment",
+      "source_doc": "Vinmec Hypertension Protocol"
+    },
+    {
+      "source": "Metformin_First_Line",
+      "target": "eGFR_30_to_45_mL_min",
+      "relation": "dose_reduction_when",
+      "label": "Giảm 50% liều khi",
+      "category": "SafetyRule",
+      "source_doc": "Vinmec Safety Alert"
+    },
+    {
+      "source": "Metformin_First_Line",
+      "target": "Severe_Renal_Impairment_eGFR_lt_30",
+      "relation": "contraindicated_with",
+      "label": "Chống chỉ định tuyệt đối với",
+      "category": "SafetyRule",
+      "source_doc": "Vinmec / BYT 5481 Alert"
+    },
+    {
+      "source": "SGLT2_Inhibitor_Empagliflozin",
+      "target": "Renal_and_Heart_Failure_Protection",
+      "relation": "proven_benefit",
+      "label": "Lợi ích đã chứng minh",
+      "category": "ClinicalBenefit",
+      "source_doc": "Vinmec Cardio-Renal Evidence"
+    },
+    {
+      "source": "Severe_Renal_Impairment_eGFR_lt_30",
+      "target": "Insulin_Therapy",
+      "relation": "requires",
+      "label": "Bắt buộc chuyển sang",
+      "category": "ClinicalAction",
+      "source_doc": "Vinmec Clinical Safety"
+    },
+    {
+      "source": "ACE_Inhibitor",
+      "target": "Renal_Hemodynamic_Protection",
+      "relation": "proven_benefit",
+      "label": "Lợi ích đã chứng minh",
+      "category": "ClinicalBenefit",
+      "source_doc": "Vinmec Nephrology Guidelines"
+    }
+  ]
+}

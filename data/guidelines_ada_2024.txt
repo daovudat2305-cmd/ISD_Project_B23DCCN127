@@ -1,0 +1,17 @@
+[ADA STANDARDS OF CARE IN DIABETES - 2024 (AMERICAN DIABETES ASSOCIATION)]
+1. GLYCEMIC TARGETS AND COMPREHENSIVE MEDICAL EVALUATION:
+- General target for nonpregnant adults: HbA1c < 7.0% (53 mmol/mol) to reduce microvascular complications.
+- For selected patients (short diabetes duration, long life expectancy, no significant cardiovascular disease), a more stringent target HbA1c < 6.5% may be reasonable.
+- Continuous Glucose Monitoring (CGM) metrics: Time in Range (TIR: 70 - 180 mg/dL) > 70%, Time Below Range (< 70 mg/dL) < 4%, Time Above Range (> 180 mg/dL) < 25%.
+- Emergency Glycemic Thresholds: Acute hypoglycemia alert at Glucose < 70 mg/dL (requires immediate 15g fast-acting carbohydrate); severe hyperglycemia alert at Glucose >= 250 mg/dL (risk of diabetic ketoacidosis or hyperosmolar state).
+
+2. CARDIOVASCULAR AND RENAL RISK MANAGEMENT:
+- Blood Pressure target: For individuals with diabetes and hypertension, blood pressure should be treated to a target of < 130/80 mmHg.
+- First-line antihypertensive therapy should include an ACE inhibitor (ACEi) or Angiotensin Receptor Blocker (ARB) in the presence of albuminuria or chronic kidney disease (CKD) to provide renal protection.
+- In patients with established CKD (eGFR 20 - 60 mL/min/1.73m²) and albuminuria, SGLT2 inhibitors (Empagliflozin, Dapagliflozin) are strongly recommended to slow CKD progression and cardiovascular events.
+
+3. LIFESTYLE INTERVENTIONS AND REINFORCEMENT LEARNING OBJECTIVES:
+- Medical Nutrition Therapy (MNT): Reducing intake of high glycemic index (GI) carbohydrates by 30-40% significantly blunts postprandial glucose excursions. Emphasize non-starchy vegetables, lean protein, and healthy dietary fats.
+- Physical Activity: At least 150 minutes per week of moderate-intensity aerobic exercise.
+- Post-meal intervention: 20 to 30 minutes of brisk walking starting 15-30 minutes after major meals effectively accelerates insulin-independent GLUT4 glucose uptake in skeletal muscles, preventing glucose peaks above 180 mg/dL.
+
