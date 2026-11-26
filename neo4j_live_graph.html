@@ -1,0 +1,127 @@
+<html>
+    <head>
+        <meta charset="utf-8">
+        
+            <script src="lib/bindings/utils.js"></script>
+            <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/dist/vis-network.min.css" integrity="sha512-WgxfT5LWjfszlPHXRmBWHkV2eceiWTOBvrKCNbdgDYTHrT2AeLCGbF4sZlZw3UMN3WtL0tGUoIAKsu8mllg/XA==" crossorigin="anonymous" referrerpolicy="no-referrer" />
+            <script src="https://cdnjs.cloudflare.com/ajax/libs/vis-network/9.1.2/dist/vis-network.min.js" integrity="sha512-LnvoEWDFrqGHlHmDD2101OrLcbsfkrzoSpvtSQtxK3RMnRV0eOkhhBN2dXHKRrUU8p2DGRTk35n4O8nWSVe1mQ==" crossorigin="anonymous" referrerpolicy="no-referrer"></script>
+            
+        
+<center>
+<h1></h1>
+</center>
+
+<!-- <link rel="stylesheet" href="../node_modules/vis/dist/vis.min.css" type="text/css" />
+<script type="text/javascript" src="../node_modules/vis/dist/vis.js"> </script>-->
+        <link
+          href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/css/bootstrap.min.css"
+          rel="stylesheet"
+          integrity="sha384-eOJMYsd53ii+scO/bJGFsiCZc+5NDVN2yr8+0RDqr0Ql0h+rP48ckxlpbzKgwra6"
+          crossorigin="anonymous"
+        />
+        <script
+          src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta3/dist/js/bootstrap.bundle.min.js"
+          integrity="sha384-JEW9xMcG8R+pH31jmWH6WWP0WintQrMb4s7ZOdauHnUtxwoG2vI5DkLtS3qm9Ekf"
+          crossorigin="anonymous"
+        ></script>
+
+
+        <center>
+          <h1></h1>
+        </center>
+        <style type="text/css">
+
+             #mynetwork {
+                 width: 100%;
+                 height: 500px;
+                 background-color: #0E1117;
+                 border: 1px solid lightgray;
+                 position: relative;
+                 float: left;
+             }
+
+             
+
+             
+
+             
+        </style>
+    </head>
+
+
+    <body>
+        <div class="card" style="width: 100%">
+            
+            
+            <div id="mynetwork" class="card-body"></div>
+        </div>
+
+        
+        
+
+        <script type="text/javascript">
+
+              // initialize global variables.
+              var edges;
+              var nodes;
+              var allNodes;
+              var allEdges;
+              var nodeColors;
+              var originalNodes;
+              var network;
+              var container;
+              var options, data;
+              var filter = {
+                  item : '',
+                  property : '',
+                  value : []
+              };
+
+              
+
+              
+
+              // This method is responsible for drawing the graph, returns the drawn network
+              function drawGraph() {
+                  var container = document.getElementById('mynetwork');
+
+                  
+
+                  // parsing and collecting nodes and edges from the python
+                  nodes = new vis.DataSet([{"color": "#FF4B4B", "font": {"color": "white"}, "id": "Diabetes_Type_2", "label": "\u0110\u00e1i th\u00e1o \u0111\u01b0\u1eddng T\u00edp 2", "shape": "dot", "size": 26, "title": "Diabetes_Type_2"}, {"color": "#FF4B4B", "font": {"color": "white"}, "id": "Prediabetes", "label": "Ti\u1ec1n \u0111\u00e1i th\u00e1o \u0111\u01b0\u1eddng", "shape": "dot", "size": 26, "title": "Prediabetes"}, {"color": "#FF4B4B", "font": {"color": "white"}, "id": "Hypertension", "label": "T\u0103ng huy\u1ebft \u00e1p", "shape": "dot", "size": 26, "title": "Hypertension"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Polyuria", "label": "Ti\u1ec3u nhi\u1ec1u (Polyuria)", "shape": "dot", "size": 18, "title": "Polyuria"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Polydipsia", "label": "Kh\u00e1t nhi\u1ec1u (Polydipsia)", "shape": "dot", "size": 18, "title": "Polydipsia"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Polyphagia", "label": "\u0102n nhi\u1ec1u (Polyphagia)", "shape": "dot", "size": 18, "title": "Polyphagia"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Weight_Loss", "label": "S\u1ee5t c\u00e2n nhanh (Weight Loss)", "shape": "dot", "size": 18, "title": "Weight_Loss"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Blurred_Vision", "label": "Nh\u00ecn m\u1edd m\u1eaft", "shape": "dot", "size": 18, "title": "Blurred_Vision"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Peripheral_Numbness", "label": "T\u00ea b\u00ec \u0111\u1ea7u chi", "shape": "dot", "size": 18, "title": "Peripheral_Numbness"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Slow_Healing_Wounds", "label": "V\u1ebft th\u01b0\u01a1ng l\u00e2u l\u00e0nh", "shape": "dot", "size": 18, "title": "Slow_Healing_Wounds"}, {"color": "#00FFAA", "font": {"color": "white"}, "id": "HbA1c_ge_6.5", "label": "HbA1c \u003e= 6.5%", "shape": "diamond", "size": 20, "title": "HbA1c_ge_6.5"}, {"color": "#00FFAA", "font": {"color": "white"}, "id": "Fasting_Glucose_ge_126", "label": "FPG \u003e= 126 mg/dL", "shape": "diamond", "size": 20, "title": "Fasting_Glucose_ge_126"}, {"color": "#00FFAA", "font": {"color": "white"}, "id": "OGTT_2h_ge_200", "label": "OGTT 2h \u003e= 200 mg/dL", "shape": "diamond", "size": 20, "title": "OGTT_2h_ge_200"}, {"color": "#00FFAA", "font": {"color": "white"}, "id": "Random_Glucose_ge_200", "label": "Glucose ng\u1eabu nhi\u00ean \u003e= 200 mg/dL", "shape": "diamond", "size": 20, "title": "Random_Glucose_ge_200"}, {"color": "#00FFAA", "font": {"color": "white"}, "id": "eGFR_ge_60_Normal", "label": "eGFR \u003e= 60 (Th\u1eadn b\u00ecnh th\u01b0\u1eddng)", "shape": "diamond", "size": 20, "title": "eGFR_ge_60_Normal"}, {"color": "#00FFAA", "font": {"color": "white"}, "id": "eGFR_30_to_45_Impairment", "label": "eGFR 30 - 44 (Suy th\u1eadn \u0111\u1ed9 3b)", "shape": "diamond", "size": 20, "title": "eGFR_30_to_45_Impairment"}, {"color": "#00FFAA", "font": {"color": "white"}, "id": "Severe_Renal_Impairment_eGFR_lt_30", "label": "eGFR \u003c 30 (Suy th\u1eadn n\u1eb7ng)", "shape": "diamond", "size": 20, "title": "Severe_Renal_Impairment_eGFR_lt_30"}, {"color": "#2E86DE", "font": {"color": "white"}, "id": "Metformin_First_Line", "label": "Metformin (\u0110\u1ea7u tay)", "shape": "triangle", "size": 22, "title": "Metformin_First_Line"}, {"color": "#2E86DE", "font": {"color": "white"}, "id": "SGLT2_Inhibitor_Empagliflozin", "label": "Empagliflozin (SGLT2i)", "shape": "triangle", "size": 22, "title": "SGLT2_Inhibitor_Empagliflozin"}, {"color": "#2E86DE", "font": {"color": "white"}, "id": "Dapagliflozin", "label": "Dapagliflozin (SGLT2i)", "shape": "triangle", "size": 22, "title": "Dapagliflozin"}, {"color": "#2E86DE", "font": {"color": "white"}, "id": "Gliclazide_MR", "label": "Gliclazide MR (Sulfonylurea)", "shape": "triangle", "size": 22, "title": "Gliclazide_MR"}, {"color": "#2E86DE", "font": {"color": "white"}, "id": "ACE_Inhibitor", "label": "Thu\u1ed1c \u1ee9c ch\u1ebf men chuy\u1ec3n (ACEi)", "shape": "triangle", "size": 22, "title": "ACE_Inhibitor"}, {"color": "#2E86DE", "font": {"color": "white"}, "id": "Insulin_Basal", "label": "Insulin n\u1ec1n (Lantus/Tresiba)", "shape": "triangle", "size": 22, "title": "Insulin_Basal"}, {"color": "#A855F7", "font": {"color": "white"}, "id": "Diabetic_Nephropathy", "label": "Bi\u1ebfn ch\u1ee9ng Th\u1eadn (CKD)", "shape": "dot", "size": 21, "title": "Diabetic_Nephropathy"}, {"color": "#A855F7", "font": {"color": "white"}, "id": "Cardiovascular_Disease", "label": "Bi\u1ebfn ch\u1ee9ng Tim m\u1ea1ch (CVD)", "shape": "dot", "size": 21, "title": "Cardiovascular_Disease"}, {"color": "#A855F7", "font": {"color": "white"}, "id": "Diabetic_Retinopathy", "label": "Bi\u1ebfn ch\u1ee9ng M\u1eaft (V\u00f5ng m\u1ea1c)", "shape": "dot", "size": 21, "title": "Diabetic_Retinopathy"}, {"color": "#A855F7", "font": {"color": "white"}, "id": "Diabetic_Foot_Ulcer", "label": "Bi\u1ebfn ch\u1ee9ng B\u00e0n ch\u00e2n", "shape": "dot", "size": 21, "title": "Diabetic_Foot_Ulcer"}, {"color": "#A855F7", "font": {"color": "white"}, "id": "Lactic_Acidosis", "label": "Nhi\u1ec5m toan Lactic", "shape": "dot", "size": 21, "title": "Lactic_Acidosis"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Obesity_BMI_ge_23", "label": "B\u00e9o ph\u00ec (BMI \u003e= 23)", "shape": "dot", "size": 18, "title": "Obesity_BMI_ge_23"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Sedentary_Lifestyle", "label": "\u00cdt v\u1eadn \u0111\u1ed9ng th\u1ec3 l\u1ef1c", "shape": "dot", "size": 18, "title": "Sedentary_Lifestyle"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Family_History_Diabetes", "label": "Ti\u1ec1n s\u1eed gia \u0111\u00ecnh m\u1eafc \u0110T\u0110", "shape": "dot", "size": 18, "title": "Family_History_Diabetes"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Low_GI_Diet_Plan", "label": "\u0102n gi\u1ea3m 35% Carb High-GI", "shape": "dot", "size": 18, "title": "Low_GI_Diet_Plan"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Brisk_Walking_30min", "label": "\u0110i b\u1ed9 nhanh 30 ph\u00fat sau \u0103n", "shape": "dot", "size": 18, "title": "Brisk_Walking_30min"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Renal_Cardio_Protection", "label": "B\u1ea3o t\u1ed3n ch\u1ee9c n\u0103ng l\u1ecdc th\u1eadn", "shape": "dot", "size": 18, "title": "Renal_Cardio_Protection"}, {"color": "#F39C12", "font": {"color": "white"}, "id": "Periodic_Monitoring_3Months", "label": "T\u00e1i kh\u00e1m \u0111\u1ecbnh k\u1ef3 3 th\u00e1ng/l\u1ea7n", "shape": "dot", "size": 18, "title": "Periodic_Monitoring_3Months"}]);
+                  edges = new vis.DataSet([{"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "DIAGNOSED_BY", "title": "DIAGNOSED_BY", "to": "HbA1c_ge_6.5"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "DIAGNOSED_BY", "title": "DIAGNOSED_BY", "to": "Fasting_Glucose_ge_126"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "DIAGNOSED_BY", "title": "DIAGNOSED_BY", "to": "OGTT_2h_ge_200"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "DIAGNOSED_BY", "title": "DIAGNOSED_BY", "to": "Random_Glucose_ge_200"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_SYMPTOM", "title": "HAS_SYMPTOM", "to": "Polyuria"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_SYMPTOM", "title": "HAS_SYMPTOM", "to": "Polydipsia"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_SYMPTOM", "title": "HAS_SYMPTOM", "to": "Polyphagia"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_SYMPTOM", "title": "HAS_SYMPTOM", "to": "Weight_Loss"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_SYMPTOM", "title": "HAS_SYMPTOM", "to": "Blurred_Vision"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_SYMPTOM", "title": "HAS_SYMPTOM", "to": "Peripheral_Numbness"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_SYMPTOM", "title": "HAS_SYMPTOM", "to": "Slow_Healing_Wounds"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_RISK_FACTOR", "title": "HAS_RISK_FACTOR", "to": "Obesity_BMI_ge_23"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_RISK_FACTOR", "title": "HAS_RISK_FACTOR", "to": "Sedentary_Lifestyle"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "HAS_RISK_FACTOR", "title": "HAS_RISK_FACTOR", "to": "Family_History_Diabetes"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "COMORBID_WITH", "title": "COMORBID_WITH", "to": "Hypertension"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "CAUSES_COMPLICATION", "title": "CAUSES_COMPLICATION", "to": "Diabetic_Nephropathy"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "CAUSES_COMPLICATION", "title": "CAUSES_COMPLICATION", "to": "Cardiovascular_Disease"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "CAUSES_COMPLICATION", "title": "CAUSES_COMPLICATION", "to": "Diabetic_Retinopathy"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "CAUSES_COMPLICATION", "title": "CAUSES_COMPLICATION", "to": "Diabetic_Foot_Ulcer"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "TREATED_BY", "title": "TREATED_BY", "to": "Metformin_First_Line"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "TREATED_BY", "title": "TREATED_BY", "to": "SGLT2_Inhibitor_Empagliflozin"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "TREATED_BY", "title": "TREATED_BY", "to": "Dapagliflozin"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "TREATED_BY", "title": "TREATED_BY", "to": "Gliclazide_MR"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "MANAGED_BY", "title": "MANAGED_BY", "to": "Low_GI_Diet_Plan"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "MANAGED_BY", "title": "MANAGED_BY", "to": "Brisk_Walking_30min"}, {"arrows": "to", "color": "#8395A7", "from": "Diabetes_Type_2", "label": "MANAGED_BY", "title": "MANAGED_BY", "to": "Periodic_Monitoring_3Months"}, {"arrows": "to", "color": "#8395A7", "from": "Hypertension", "label": "TREATED_BY", "title": "TREATED_BY", "to": "ACE_Inhibitor"}, {"arrows": "to", "color": "#8395A7", "from": "Severe_Renal_Impairment_eGFR_lt_30", "label": "NGUY_CO_DANG_KE", "title": "NGUY_CO_DANG_KE", "to": "Lactic_Acidosis"}, {"arrows": "to", "color": "#8395A7", "from": "Severe_Renal_Impairment_eGFR_lt_30", "label": "REQUIRES", "title": "REQUIRES", "to": "Insulin_Basal"}, {"arrows": "to", "color": "#8395A7", "from": "Metformin_First_Line", "label": "DOSE_REDUCTION_WHEN", "title": "DOSE_REDUCTION_WHEN", "to": "eGFR_30_to_45_Impairment"}, {"arrows": "to", "color": "#8395A7", "from": "Metformin_First_Line", "label": "CONTRAINDICATED_WITH", "title": "CONTRAINDICATED_WITH", "to": "Severe_Renal_Impairment_eGFR_lt_30"}, {"arrows": "to", "color": "#8395A7", "from": "SGLT2_Inhibitor_Empagliflozin", "label": "PROVEN_BENEFIT", "title": "PROVEN_BENEFIT", "to": "Renal_Cardio_Protection"}]);
+
+                  nodeColors = {};
+                  allNodes = nodes.get({ returnType: "Object" });
+                  for (nodeId in allNodes) {
+                    nodeColors[nodeId] = allNodes[nodeId].color;
+                  }
+                  allEdges = edges.get({ returnType: "Object" });
+                  // adding nodes and edges to the graph
+                  data = {nodes: nodes, edges: edges};
+
+                  var options = {"physics": {"barnesHut": {"gravitationalConstant": -4000, "centralGravity": 0.3, "springLength": 95, "springConstant": 0.04}, "minVelocity": 0.75}};
+
+                  
+
+
+                  
+
+                  network = new vis.Network(container, data, options);
+
+                  
+
+                  
+
+                  
+
+
+                  
+
+                  return network;
+
+              }
+              drawGraph();
+        </script>
+    </body>
+</html>

@@ -60,9 +60,20 @@ def run_cli_mode():
     print("=" * 85)
 
     # 1. Khởi tạo CSDL SQLite & Các Phân hệ Nền tảng
-    print("\n[INFO] Khởi tạo CSDL SQLite, Đồ thị Tri thức (DB_diabet.cypher) và Vector RAG...")
+    print("\n[INFO] Khởi tạo CSDL SQLite, Đồ thị Tri thức Neo4j (DB_diabet.cypher) và Vector RAG...")
     init_database()
     kg = MedicalKnowledgeGraph()
+    kg_summary = kg.get_graph_summary()
+    if kg.neo4j_connected:
+        print(
+            f"[INFO] Kết nối Neo4j mặc định thành công tại {kg.neo4j_uri} "
+            f"({kg_summary['num_nodes']} nút, {kg_summary['num_edges']} quan hệ)."
+        )
+    else:
+        print(
+            f"[WARN] Chưa kết nối được Neo4j ({kg.neo4j_uri}): {kg.neo4j_error}. "
+            f"Đang dùng fallback NetworkX ({kg_summary['num_nodes']} nút, {kg_summary['num_edges']} quan hệ)."
+        )
     vstore = ClinicalVectorStore()
     vstore.build_index_from_directory()
     coordinator = CoordinatorAgent(kg, vstore)
@@ -528,13 +539,16 @@ def run_streamlit_app():
                                 s["url"] = "https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te"
 
     # HEADER CHUẨN MỰC Y KHOA
-    st.markdown("""
+    kg_badge_color = "#22c55e" if kg.neo4j_connected else "#f59e0b"
+    kg_badge_text = "Neo4j: Đã kết nối (Mặc định)" if kg.neo4j_connected else "Neo4j: Offline (Fallback NetworkX)"
+    st.markdown(f"""
 <div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 0.9rem 1.4rem; border-radius: 8px; color: white; margin-bottom: 0.9rem;">
     <div>
         <div style="font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em;">HỆ THỐNG ĐA TÁC TỬ HỖ TRỢ QUYẾT ĐỊNH ĐIỀU TRỊ TIỂU ĐƯỜNG</div>
         <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.2rem;">Clinical Decision Support System (CDSS) | GraphRAG, Deep Learning & Reinforcement Learning</div>
     </div>
     <div style="display: flex; gap: 0.6rem; align-items: center;">
+        <span style="background: #1e293b; color: {kg_badge_color}; border: 1px solid #334155; font-size: 0.82rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 4px;">{kg_badge_text}</span>
         <span style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; font-size: 0.82rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 4px;">8 Tác tử hoạt động</span>
         <span style="background: #1e293b; color: #cbd5e1; border: 1px solid #334155; font-size: 0.82rem; font-weight: 500; padding: 0.25rem 0.65rem; border-radius: 4px;">PTIT ISD 2026</span>
     </div>
@@ -1047,40 +1061,78 @@ def run_streamlit_app():
         st.subheader("Cơ Sở Tri Thức Đồ Thị Y Khoa Neo4j")
 
         g_summary = kg.get_graph_summary()
+        if g_summary["neo4j_connected"]:
+            st.success(f"Đang kết nối mặc định tới Neo4j tại `{g_summary['neo4j_uri']}` (Truy vấn Cypher trực tiếp).")
+        else:
+            st.warning(
+                f"Chưa kết nối được Neo4j tại `{g_summary['neo4j_uri']}` "
+                f"({g_summary.get('neo4j_error') or 'Neo4j server chưa chạy hoặc sai thông tin đăng nhập'}). "
+                "Hệ thống đang tạm chạy chế độ dự phòng NetworkX in-memory."
+            )
+
+        if "neo4j_feedback" in st.session_state and st.session_state.neo4j_feedback:
+            fb_level, fb_msg = st.session_state.pop("neo4j_feedback")
+            if fb_level == "success":
+                st.success(fb_msg)
+            elif fb_level == "warning":
+                st.warning(fb_msg)
+            else:
+                st.error(fb_msg)
+
         col_kg1, col_kg2, col_kg3 = st.columns(3)
         col_kg1.metric("Nút Thực Thể (Entities)", g_summary["num_nodes"])
         col_kg2.metric("Quan Hệ Ngữ Nghĩa (Relations)", g_summary["num_edges"])
-        col_kg3.metric("Nguồn Dữ Liệu Y Khoa", "Vinmec & QĐ 5481/BYT")
+        col_kg3.metric("Backend Đồ Thị Đang Dùng", g_summary.get("backend", "Neo4j"))
 
-        # Cấu hình kết nối Neo4j thu gọn trong expander
-        with st.expander("Cấu hình kết nối Neo4j Enterprise (Mặc định: In-memory NetworkX)", expanded=False):
+        # Cấu hình kết nối Neo4j (Mặc định tự động kết nối khi khởi chạy)
+        with st.expander("Cấu hình kết nối Neo4j (Mặc định hệ thống)", expanded=not g_summary["neo4j_connected"]):
             neo_col1, neo_col2 = st.columns([2, 1])
             with neo_col1:
-                neo_uri = st.text_input("Neo4j Bolt URI:", value="bolt://localhost:7687")
-                neo_user = st.text_input("Tên đăng nhập:", value="neo4j")
-                neo_pass = st.text_input("Mật khẩu Neo4j:", value="password", type="password")
+                neo_uri = st.text_input("Neo4j Bolt URI:", value=kg.neo4j_uri)
+                neo_user = st.text_input("Tên đăng nhập:", value=kg.neo4j_user)
+                neo_pass = st.text_input("Mật khẩu Neo4j:", value=kg.neo4j_password, type="password")
+                neo_db = st.text_input("Database (để trống = mặc định):", value=kg.neo4j_database or "")
             with neo_col2:
                 st.write("")
                 st.write("")
-                if st.button("Kiểm tra kết nối Neo4j", use_container_width=True):
-                    ok = kg.connect_neo4j(neo_uri, neo_user, neo_pass)
+                if st.button("Kết nối / Kiểm tra Neo4j", use_container_width=True):
+                    ok = kg.connect_neo4j(neo_uri, neo_user, neo_pass, database=neo_db.strip() or None)
                     if ok:
-                        st.success("Kết nối cơ sở dữ liệu Neo4j thành công.")
+                        kg._ensure_neo4j_seeded("DB_diabet.cypher")
+                        st.session_state.neo4j_feedback = ("success", f"Kết nối Neo4j thành công tới {neo_uri}.")
                     else:
-                        st.info("Không phát hiện Neo4j cục bộ. Đang chạy NetworkX in-memory.")
+                        st.session_state.neo4j_feedback = (
+                            "error",
+                            f"Không kết nối được Neo4j ({neo_uri}): {kg.neo4j_error}. Đang dùng NetworkX fallback.",
+                        )
+                    st.rerun()
                 if st.button("Nạp DB_diabet.cypher vào Neo4j", use_container_width=True):
                     ok_cypher = kg.init_neo4j_from_cypher_file("DB_diabet.cypher")
                     if ok_cypher:
-                        st.success("Nạp thành công DB_diabet.cypher vào Neo4j.")
+                        st.session_state.neo4j_feedback = ("success", "Nạp thành công DB_diabet.cypher vào Neo4j.")
+                        st.rerun()
                     else:
                         st.warning("Vui lòng kết nối Neo4j trước khi nạp Cypher script.")
 
         st.markdown("##### Trực quan hóa Đồ thị Tri thức Y tế Tương tác")
-        graph_choice = st.radio("Chọn nguồn đồ thị hiển thị:", ["Đồ thị y tế Vinmec Hospital (33 nút, 32 quan hệ)", "Đồ thị y tế tiêu chuẩn (25 nút, 24 quan hệ)"], horizontal=True)
+        graph_options = []
+        if g_summary["neo4j_connected"]:
+            graph_options.append("Đồ thị Neo4j trực tiếp (Live Cypher)")
+        graph_options.extend([
+            "Đồ thị y tế Vinmec Hospital (33 nút, 32 quan hệ)",
+            "Đồ thị y tế tiêu chuẩn (25 nút, 24 quan hệ)",
+        ])
+        graph_choice = st.radio("Chọn nguồn đồ thị hiển thị:", graph_options, horizontal=True)
 
-        target_html = "kg_graph.html" if "Vinmec" in graph_choice else "graph_view.html"
-        if not os.path.exists(target_html) and target_html == "graph_view.html":
-            kg.generate_pyvis_html("graph_view.html")
+        if "Live Cypher" in graph_choice:
+            target_html = "neo4j_live_graph.html"
+            kg.generate_pyvis_html(target_html)
+        elif "Vinmec" in graph_choice:
+            target_html = "kg_graph.html"
+        else:
+            target_html = "graph_view.html"
+            if not os.path.exists(target_html):
+                kg.generate_pyvis_html(target_html)
 
         if os.path.exists(target_html):
             with open(target_html, "r", encoding="utf-8") as f:
@@ -1105,7 +1157,8 @@ def run_streamlit_app():
         st.markdown("##### Mô phỏng Duyệt Đồ thị Bắc cầu 2-Hop")
         c_hop1, c_hop2 = st.columns([1, 2])
         with c_hop1:
-            selected_entity = st.selectbox("Chọn thực thể nguồn để duyệt 2-Hop:", options=list(kg.G.nodes()), index=0)
+            node_options = g_summary.get("nodes") or list(kg.G.nodes())
+            selected_entity = st.selectbox("Chọn thực thể nguồn để duyệt 2-Hop:", options=node_options, index=0)
         with c_hop2:
             chains = kg.get_multi_hop_facts(selected_entity, max_hops=2)
             st.write(f"Tìm thấy **{len(chains)}** đường dẫn quan hệ từ `{selected_entity}`:")

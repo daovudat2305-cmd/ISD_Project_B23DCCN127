@@ -504,11 +504,16 @@ class KnowledgeRetrievalAgent:
                 "excerpt": vr.get("text", "")[:280] + "..."
             })
 
+        graph_source_label = (
+            "Neo4j Knowledge Graph (DB_diabet.cypher / Vinmec Hospital KB)"
+            if self.kg.neo4j_connected
+            else "NetworkX Knowledge Graph Fallback (medical_knowledge_triples.csv)"
+        )
         for mh in multi_hop_facts[:4]:
             ranked_evidence.append({
                 "type": "GRAPH_REASONING_CHAIN",
                 "chain": mh.get("chain_str", ""),
-                "source": "Neo4j Knowledge Graph (DB_diabet.cypher / Vinmec Hospital KB)",
+                "source": graph_source_label,
                 "hops": mh.get("hops", 1)
             })
 
@@ -552,6 +557,7 @@ class KnowledgeRetrievalAgent:
             "fused_context": fused["fused_context"],
             "ranked_evidence": ranked_evidence,
             "source_attributions": source_attributions,
+            "graph_backend": "Neo4j" if self.kg.neo4j_connected else "NetworkX (Fallback)",
             "summary": (
                 f"Đã nhận diện {len(matched_entities)} thực thể đồ thị, truy xuất {len(vector_results)} "
                 f"đoạn văn bản chỉ dẫn với độ tương đồng Cosine cao nhất, quy gán nguồn gốc tới 3 văn bản chính thống."
@@ -965,11 +971,12 @@ class CoordinatorAgent:
         kg_msg = self.kg_agent.retrieve(search_query, patient=validated_features, request_id=req_id)
         invoked_messages.append(kg_msg)
 
+        kg_backend_desc = "Neo4j (DB_diabet.cypher)" if self.kg.neo4j_connected else "NetworkX Fallback (CSV)"
         react_trace.append({
             "step": 8,
             "phase": "Bước 8: Truy xuất Đồ thị & RAG Văn bản",
             "agent": "KnowledgeRetrievalAgent (A_KG)",
-            "thought": "Nhận diện thực thể, duyệt đường dẫn 2-hop trên Neo4j (DB_diabet.cypher) và tìm Top-3 đoạn văn bản QĐ 5481/ADA.",
+            "thought": f"Nhận diện thực thể, duyệt đường dẫn 2-hop trên {kg_backend_desc} và tìm Top-3 đoạn văn bản QĐ 5481/ADA.",
             "action": "graph_2hop_retrieval() + vector_cosine_search() + source_attribution()",
             "observation": kg_msg.payload["summary"],
             "message": kg_msg.to_dict()
