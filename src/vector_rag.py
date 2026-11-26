@@ -75,7 +75,7 @@ class ClinicalVectorStore:
             (
                 "Quyết định 5481/QĐ-BYT (Bộ Y tế Việt Nam)", 
                 "guidelines_byt_5481.txt",
-                "https://kcb.vn/van-ban/quyet-dinh-so-5481-qd-byt-ngay-30-12-2020-ve-viec-ban-hanh-tai-lieu-chuyen-mon-huong-dan-chan-doan-va-dieu-tri-dai-thao-duong-tip-2.html",
+                "https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te",
                 "QD_5481_BYT.pdf (Trang 15–28)"
             ),
             (
@@ -87,7 +87,7 @@ class ClinicalVectorStore:
             (
                 "Chuyên mục Đái tháo đường Típ 2 - Bệnh viện Vinmec", 
                 "vinmec_diabetes_article.txt",
-                "https://www.vinmec.com/vi/benh/dai-thao-duong-type-2-4166/",
+                "https://www.vinmec.com/vi/tim-kiem/?q=ti%E1%BB%83u+%C4%91%C6%B0%E1%BB%9Dng",
                 "Vinmec_NoiTiet_TieuDuong.pdf"
             )
         ]

@@ -518,7 +518,7 @@ class KnowledgeRetrievalAgent:
                 "institution": "Bộ Y tế Việt Nam",
                 "title": "Quyết định số 5481/QĐ-BYT Hướng dẫn chẩn đoán và điều trị đái tháo đường típ 2",
                 "reference_file": "guidelines_byt_5481.txt / QD_5481_BYT.pdf",
-                "url": "https://kcb.vn/van-ban/quyet-dinh-so-5481-qd-byt-ngay-30-12-2020-ve-viec-ban-hanh-tai-lieu-chuyen-mon-huong-dan-chan-doan-va-dieu-tri-dai-thao-duong-tip-2.html"
+                "url": "https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te"
             },
             {
                 "institution": "Hiệp hội Đái tháo đường Hoa Kỳ (ADA)",
@@ -528,9 +528,9 @@ class KnowledgeRetrievalAgent:
             },
             {
                 "institution": "Bệnh viện Đa khoa Quốc tế Vinmec",
-                "title": "Chuyên mục Đái tháo đường type 2 - Nguyên nhân, triệu chứng và điều trị",
+                "title": "Chuyên mục Đái tháo đường type 2 - Khoa Nội tiết Chuyển hóa",
                 "reference_file": "vinmec_diabetes_article.txt / DB_diabet.cypher",
-                "url": "https://www.vinmec.com/vi/benh/dai-thao-duong-type-2-4166/"
+                "url": "https://www.vinmec.com/vi/tim-kiem/?q=ti%E1%BB%83u+%C4%91%C6%B0%E1%BB%9Dng"
             }
         ]
 
