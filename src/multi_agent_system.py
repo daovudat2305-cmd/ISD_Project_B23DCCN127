@@ -704,51 +704,45 @@ class ExplanationAgent:
             audit_status = "FLAGGED_FOR_HUMAN_REVIEW"
 
         # Định dạng Báo cáo Hỗ trợ Quyết định Y khoa (Decision-Support Report)
-        report_markdown = f"""# BÁO CÁO HỖ TRỢ QUYẾT ĐỊNH Y KHOA ĐA TÁC TỬ
-*(PTIT Intelligent System Development - Diabetes Hybrid Multiagent System)*
+        report_markdown = f"""### Báo cáo Hỗ trợ Quyết định Y khoa (`{req_id}`)
 
-**Mã yêu cầu (Request ID):** `{req_id}` | **Mã Bệnh nhân:** `{patient.get('patient_id', 'N/A')}` | **Họ và tên:** {patient.get('full_name', 'Ẩn danh')}
-**Tuổi:** {patient.get('age', 'N/A')} | **BMI:** {patient.get('bmi', 'N/A')} kg/m² | **Chức năng lọc thận (eGFR):** {egfr} mL/phút/1.73m²
-**Ghi chú tiền sử:** {patient.get('clinical_notes', 'Không có ghi chú nền')}
+**Bệnh nhân:** {patient.get('full_name', 'Ẩn danh')} (`{patient.get('patient_id', 'N/A')}`) · **Tuổi:** {patient.get('age', 'N/A')} · **BMI:** {patient.get('bmi', 'N/A')} kg/m² · **eGFR:** {egfr} mL/phút/1.73m²  
+**Tiền sử:** {patient.get('clinical_notes', 'Không có ghi chú')}
 
 ---
 
-### PHẦN 1: KẾT QUẢ DỰ ĐOÁN HỌC SÂU (DL PREDICTION)
-- **Xác suất mắc Đái tháo đường Típ 2 (Mạng 6 tầng):** **{dl_data.get('risk_percentage', 0.0)}%** [{dl_data.get('risk_level', 'Chưa rõ')}]
-- **Mã hóa biểu diễn Bottleneck $h^{{(5)}}$:** `{dl_data.get('bottleneck_features', [])[:4]}...` (8 chiều nén)
-- **Dự báo xu hướng CGM 4h tới (Mạng RNN dừng):** `{dl_data.get('cgm_forecast', {}).get('forecast_4h', [])}` mg/dL
-- **Cảnh báo đỉnh đường huyết dự báo:** **{dl_data.get('cgm_forecast', {}).get('peak_glucose', 0.0)} mg/dL**
+#### 1. Dự đoán Học sâu
+- **Xác suất ĐTĐ Típ 2:** **{dl_data.get('risk_percentage', 0.0)}%** ({dl_data.get('risk_level', 'Chưa rõ')})
+- **Biểu diễn nén Bottleneck $h^{{(5)}}$:** `{dl_data.get('bottleneck_features', [])[:4]}...`
+- **Dự báo CGM 4h tới:** `{dl_data.get('cgm_forecast', {}).get('forecast_4h', [])}` mg/dL (Đỉnh: **{dl_data.get('cgm_forecast', {}).get('peak_glucose', 0.0)} mg/dL**)
 
-### PHẦN 2: KẾT QUẢ THẨM ĐỊNH TƯỜNG MINH THEO LUẬT (RULE-BASED AUDIT)
-- **Tình trạng Cấp cứu:** {emergency_info.get('message', 'Chỉ số đường huyết tức thời không ở ngưỡng cấp cứu.')}
-- **Tiêu chuẩn chẩn đoán ADA 2024 / QĐ 5481 thỏa mãn:**
+#### 2. Thẩm định Luật Lâm sàng
+- **Cấp cứu:** {emergency_info.get('message', 'Đường huyết không ở ngưỡng cấp cứu.')}
+- **Tiêu chuẩn chẩn đoán thỏa mãn:**
   * {chr(10).join(['- ' + c for c in rule_data.get('diagnostic_criteria_met', ['Chưa thỏa mãn tiêu chuẩn chẩn đoán ĐTĐ đầy đủ.'])])}
-- **An toàn chức năng thận & Hiệu chỉnh liều Metformin:**
-  > **{renal_info.get('dose_instruction', 'Không có khuyến cáo đặc thù.')}**
+- **An toàn thận & Chỉnh liều Metformin:**
+  > **{renal_info.get('dose_instruction', 'Không có khuyến cáo đặc thù.')}**  
   *(Trạng thái: **{renal_info.get('metformin_status', 'N/A')}**)*
-- **Cờ kiểm toán lâm sàng kích hoạt:** `{', '.join(rule_data.get('review_flags', ['Không có cờ cảnh báo']))}`
-- **Yêu cầu Bác sĩ thẩm định:** **{'BẮT BUỘC (PHÁT HIỆN MÂU THUẪN)' if rule_data.get('human_review_required') else 'Khuyến nghị tham vấn thường quy'}**
+- **Cờ kiểm toán:** `{', '.join(rule_data.get('review_flags', ['Không có']))}`
+- **Thẩm định bác sĩ:** **{'Bắt buộc (phát hiện mâu thuẫn)' if rule_data.get('human_review_required') else 'Tham vấn thường quy'}**
 
-### PHẦN 3: BẰNG CHỨNG TRUY XUẤT TỪ ĐỒ THỊ TRI THỨC & VĂN BẢN (EVIDENCE & SOURCES)
-- **Mắt xích Đồ thị Tri thức (Neo4j / DB_diabet.cypher):**
+#### 3. Bằng chứng Đồ thị & Văn bản
+- **Đồ thị tri thức:**
 {chr(10).join(['  * ' + str(f) for f in kg_data.get('graph_facts', [])[:3]]) if kg_data.get('graph_facts') else '  * (Không có quan hệ vi phạm trực tiếp)'}
-- **Trích dẫn Văn bản Hướng dẫn (Vector RAG Cosine Similarity):**
-{chr(10).join([f"  * **[{c.get('source')} - Score: {c.get('similarity_score', 0.0):.3f}]:** \"{c.get('text', '')[:180]}...\"" for c in kg_data.get('vector_chunks', [])[:2]]) if kg_data.get('vector_chunks') else '  * (Đã đối chiếu kho văn bản lâm sàng)'}
+- **Tài liệu hướng dẫn:**
+{chr(10).join([f"  * **[{c.get('source')} - {c.get('similarity_score', 0.0):.3f}]:** \"{c.get('text', '')[:180]}...\"" for c in kg_data.get('vector_chunks', [])[:2]]) if kg_data.get('vector_chunks') else '  * (Đã đối chiếu kho văn bản lâm sàng)'}
 
-### PHẦN 4: CHÍNH SÁCH MÔ PHỎNG GIÁO DỤC LỐI SỐNG (RL SIMULATION EXTENSION)
-- **Chính sách Q-Learning trong môi trường mô phỏng:** {rl_data.get('action_description', 'N/A')}
-- **Khoảng thời gian theo dõi mô phỏng:** {rl_data.get('simulated_followup_interval_days', 30)} ngày
+#### 4. Mô phỏng Can thiệp Lối sống (RL)
+- **Chính sách mô phỏng:** {rl_data.get('action_description', 'N/A')}
+- **Chu kỳ theo dõi:** {rl_data.get('simulated_followup_interval_days', 30)} ngày
 {rl_data.get('detailed_plan', '')}
 
 ---
 
-### PHẦN 5: TUYÊN BỐ AN TOÀN VÀ GIỚI HẠN NGHIÊN CỨU (LIMITATIONS & SAFETY)
-> [!IMPORTANT]
-> 1. **Không phải chẩn đoán xác định:** Kết quả từ hệ thống đa tác tử là hỗ trợ quyết định (Decision-Support), không phải chẩn đoán xác nhận thay thế bác sĩ lâm sàng.
-> 2. **Không tự ý kê đơn / chỉnh liều:** Hệ thống và các thuật toán tuyệt đối không tự động kê đơn hay chỉnh liều thuốc cho bệnh nhân thực tế. Mọi can thiệp điều trị bắt buộc phải được bác sĩ chuyên khoa phê duyệt.
-> 3. **Tác tử RL chỉ hoạt động trong mô phỏng:** Mô hình Q-Learning vận hành độc quyền trong môi trường mô phỏng phục vụ giáo dục tuân thủ lối sống và nghiên cứu lý thuyết.
-> 4. **Tính truy vết nguồn gốc (Traceability):** Toàn bộ khuyến nghị và chuỗi suy luận đều được quy gán nguồn gốc minh bạch từ Quyết định số 5481/QĐ-BYT, Tiêu chuẩn ADA 2024 và Cơ sở Tri thức Bệnh viện Vinmec.
-> 5. **Chỉ số kiểm định chất lượng:** Điểm dẫn chứng (Groundedness): **{groundedness}%** | Tỷ lệ ảo giác kiểm soát: **{hallucination_rate}%** | Trạng thái: **{audit_status}**.
+#### 5. Giới hạn & An toàn Lâm sàng
+> 1. Kết quả chỉ mang tính **hỗ trợ quyết định**, không thay thế chẩn đoán của bác sĩ lâm sàng.
+> 2. Hệ thống không tự động kê đơn hay chỉnh liều thuốc thực tế; tác tử RL chỉ vận hành trong môi trường mô phỏng.
+> 3. **Kiểm định:** Groundedness **{groundedness}%** · Hallucination **{hallucination_rate}%** · Trạng thái **{audit_status}**.
 """
 
         payload = {

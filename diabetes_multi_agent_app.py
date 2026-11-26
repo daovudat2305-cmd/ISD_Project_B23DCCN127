@@ -15,6 +15,7 @@ Hỗ trợ 2 chế độ:
 
 import sys
 import os
+import html
 import argparse
 import time
 import json
@@ -125,30 +126,26 @@ def run_cli_mode():
         "diastolic_bp": 110,
         "egfr": -10.0
     }
-    print(f"Dữ liệu đầu vào lỗi: Tuổi=-8, BMI=5.0, Glucose=3500 mg/dL, HA=70/110 mmHg, eGFR=-10")
+    print("Dữ liệu đầu vào lỗi: Tuổi=-8, BMI=5.0, Glucose=3500 mg/dL, HA=70/110 mmHg, eGFR=-10")
     bad_result = coordinator.execute_workflow(invalid_patient, "Kiểm thử kiểm tra lỗi")
     print(f"Trạng thái điều phối: {bad_result['status'].upper()}")
     print("Các lỗi xác thực được PatientDataAgent phát hiện:")
     for err in bad_result.get("errors", []):
         print(f"  [X] {err}")
-    print(f"[KẾT LUẬN KIỂM THỬ] Coordinator Agent đã chấm dứt quy trình ngay tại Bước 5 để bảo đảm an toàn.")
+    print("[KẾT LUẬN KIỂM THỬ] Coordinator Agent đã chấm dứt quy trình ngay tại Bước 5 để bảo đảm an toàn.")
     print("Để mở giao diện trực quan, chạy lệnh: streamlit run diabetes_multi_agent_app.py\n")
 
 
 # =============================================================================
-# CHẾ ĐỘ 2: GIAO DIỆN WEB DASHBOARD TẬP TRUNG (STREAMLIT)
+# CHẾ ĐỘ 2: GIAO DIỆN WEB (STREAMLIT - THAM KHẢO GEMINI WEB)
 # =============================================================================
 def generate_clinical_chat_response(chat_query: str, coordinator, kg_res, rag_results, graph_facts) -> str:
     """
-    Bộ tổng hợp tri thức lâm sàng đa tầng (Clinical Knowledge Synthesizer):
-    Tự động phân tích câu hỏi người dùng, kết hợp dữ liệu từ GraphRAG (Neo4j / DB_diabet.cypher),
-    Vector Store (Top-k tài liệu QĐ 5481/BYT, ADA 2024, Vinmec) và hệ thống tác tử chuyên khoa
-    để tạo câu trả lời y khoa toàn diện, chi tiết, không cụt ngủn và không bị gãy liên kết (404).
+    Tổng hợp câu trả lời lâm sàng trực tiếp, ngắn gọn và rõ ràng từ GraphRAG, Vector RAG và hệ đa tác tử.
     """
     lower_q = chat_query.lower()
-    bot_reply_blocks = []
 
-    # TRƯỜNG HỢP 1: TƯ VẤN CA BỆNH / HỘI CHẨN LÂM SÀNG
+    # 1. TƯ VẤN CA BỆNH / HỘI CHẨN
     if any(k in lower_q for k in ["tư vấn", "hội chẩn", "phác đồ", "bn001", "bn002", "bn003", "ca bệnh", "kế hoạch điều trị"]):
         target_pid = "BN001"
         if "bn002" in lower_q:
@@ -162,311 +159,524 @@ def generate_clinical_chat_response(chat_query: str, coordinator, kg_res, rag_re
         rl_out = agent_res["rl_output"]
         p_info = agent_res["patient"]
 
-        bot_reply_blocks.append(
-            f"### Báo cáo Tư vấn Lâm sàng Toàn diện từ Hệ Đa Tác Tử (Mã: `{agent_res['request_id']}`)\n"
-            f"**Hồ sơ bệnh nhân:** {p_info['full_name']} (Mã: `{p_info['patient_id']}`) | Tuổi: {p_info['age']} tuổi | BMI: {p_info['bmi']} kg/m² | eGFR: **{p_info['egfr']} mL/phút/1.73m²**\n\n"
-            f"#### 1. Đánh giá Nguy cơ & Dự báo Học Sâu (DLPredictionAgent - A_DL):\n"
-            f"- **Xác suất mắc ĐTĐ Típ 2 (Mạng DNN 6 tầng):** **{dl_out['risk_analysis']['risk_percentage']}%** [{dl_out['risk_analysis']['risk_level']}]\n"
-            f"- **Dự báo đường huyết liên tục CGM 4h tới (RNN):** `{dl_out['cgm_forecast']['forecast_4h']}` mg/dL\n"
-            f"- **Đỉnh đường huyết cảnh báo:** **{dl_out['cgm_forecast']['peak_glucose']} mg/dL** (Cần kiểm soát đỉnh sau ăn < 180 mg/dL theo ADA 2024)\n\n"
-            f"#### 2. Dược lý & An toàn Thận (RuleBasedAgent & KGRAGAgent):\n"
-            f"- **Khuyến nghị chỉnh liều Metformin:** {rag_out['safety_check']['dose_adjustment']}\n"
-            f"- **Thuốc phối hợp bảo vệ cơ quan đích:** {', '.join(rag_out['safety_check']['recommended_drugs'])} (Ưu tiên SGLT2i Empagliflozin/Dapagliflozin làm chậm suy giảm chức năng thận)\n"
-            f"- **Kiểm soát huyết áp & Đạm niệu:** Khuyến nghị dùng nhóm ACEi hoặc ARB để bảo vệ cầu thận khi có tăng huyết áp kèm theo.\n\n"
-            f"#### 3. Kế hoạch Can thiệp Lối sống Tối ưu (RLSimulationAgent - A_RL):\n"
-            f"- **Chính sách tối ưu Bellman:** {rl_out['action_desc']}\n"
-            f"- **Chi tiết kế hoạch thực hiện:**\n{rl_out['detailed_plan']}\n\n"
-            f"#### 4. Thẩm định Bằng chứng & Kiểm toán Lâm sàng (ExplanationAgent - A_exp):\n"
-            f"- **Điểm trung thực dẫn chứng (Groundedness):** `{agent_res['groundedness_score']}%` | **Tỷ lệ ảo giác:** `{agent_res['hallucination_rate']}%`\n"
-            f"- **Thời gian xử lý đa tác tử:** `{agent_res['latency_ms']} ms` | **Trạng thái kiểm toán:** Đã đối chiếu QĐ 5481/BYT, ADA 2024 và Vinmec.\n"
+        return (
+            f"### Tư vấn lâm sàng `{p_info['patient_id']}` — {p_info['full_name']}\n"
+            f"Tuổi `{p_info['age']}` · BMI `{p_info['bmi']}` kg/m² · `eGFR {p_info['egfr']}` mL/phút/1.73m²\n\n"
+            f"#### 1. Nguy cơ & dự báo đường huyết\n"
+            f"- **Xác suất ĐTĐ Típ 2:** **{dl_out['risk_analysis']['risk_percentage']}%** ({dl_out['risk_analysis']['risk_level']})\n"
+            f"- **Dự báo CGM 4h tới:** `{dl_out['cgm_forecast']['forecast_4h']}` mg/dL (Đỉnh **{dl_out['cgm_forecast']['peak_glucose']} mg/dL**, mục tiêu sau ăn `< 180 mg/dL`)\n\n"
+            f"#### 2. Dược lý & an toàn thận\n"
+            f"- **Chỉnh liều Metformin:** {rag_out['safety_check']['dose_adjustment']}\n"
+            f"- **Thuốc phối hợp:** {', '.join(rag_out['safety_check']['recommended_drugs'])}\n"
+            f"- **Bảo vệ cầu thận:** Ưu tiên nhóm `ACEi` hoặc `ARB` nếu kèm tăng huyết áp hoặc đạm niệu.\n\n"
+            f"#### 3. Can thiệp lối sống\n"
+            f"- **Chính sách khuyến nghị:** {rl_out['action_desc']}\n"
+            f"{rl_out['detailed_plan']}\n\n"
+            f"*Kiểm toán `{agent_res['request_id']}` · Groundedness `{agent_res['groundedness_score']}%` · Xử lý `{agent_res['latency_ms']} ms`*"
         )
 
-    # TRƯỜNG HỢP 2: BIẾN CHỨNG ĐÁI THÁO ĐƯỜNG
-    elif any(k in lower_q for k in ["biến chứng", "hậu quả", "nguy hiểm", "mù", "loét", "cắt cụt", "đoạn chi", "dka", "hhs", "tai biến", "đột quỵ"]):
-        bot_reply_blocks.append(
-            "### Các Biến Chứng Nguy Hiểm Của Bệnh Đái Tháo Đường Típ 2\n"
-            "Dựa trên tài liệu Chuyên khoa Nội tiết - Bệnh viện Đa khoa Quốc tế Vinmec và Hướng dẫn QĐ 5481/QĐ-BYT, biến chứng đái tháo đường được chia thành 2 nhóm chính:\n\n"
-            "#### 1. Biến chứng cấp tính (Đe dọa tính mạng tức thì - Cần can thiệp cấp cứu y tế):\n"
-            "- **Hạ đường huyết cấp (Hypoglycemia):** Khi glucose máu < 70 mg/dL do dùng thuốc/insulin quá liều hoặc bỏ bữa. Gây run rẩy, vã mồ hôi, co giật, hôn mê nếu không xử trí kịp thời.\n"
-            "- **Nhiễm toan ceton do đái tháo đường (Diabetic Ketoacidosis - DKA):** Thường kèm Glucose > 250 mg/dL, hơi thở có mùi táo chín (mùi aceton), toan chuyển hóa, buồn nôn, rối loạn điện giải nghiêm trọng.\n"
-            "- **Hội chứng tăng áp lực thẩm thấu do tăng đường huyết (HHS):** Glucose máu tăng cực cao (> 600 mg/dL) gây mất nước nội bào nặng nề, lơ mơ, hôn mê, tỷ lệ tử vong cao đặc biệt ở người cao tuổi.\n\n"
-            "#### 2. Biến chứng mạn tính tiến triển (Tổn thương cơ quan đích lâu dài):\n"
-            "- **Biến chứng thận (Diabetic Nephropathy):** Tổn thương mao mạch vi cầu thận gây tiểu đạm (microalbumin niệu), tiến triển dần đến suy thận mạn giai đoạn cuối, phải lọc máu chu kỳ hoặc ghép thận.\n"
-            "- **Biến chứng mắt & thị lực (Diabetic Retinopathy):** Tổn thương võng mạc do vi mạch máu nuôi dưỡng bị tổn thương, phù hoàng điểm, xuất huyết võng mạc, nguy cơ mù lòa vĩnh viễn.\n"
-            "- **Biến chứng thần kinh (Diabetic Neuropathy):** Tổn thương các sợi thần kinh ngoại biên gây tê bì, dị cảm, cảm giác châm chích, 'bỏng rát' hoặc mất hoàn toàn cảm giác đau ở bàn chân.\n"
-            "- **Biến chứng tim mạch & đột quỵ:** Tăng nguy cơ xơ vữa động mạch, nhồi máu cơ tim cấp và đột quỵ não lên gấp 2–4 lần so với người không mắc bệnh.\n"
-            "- **Biến chứng bàn chân đái tháo đường (Diabetic Foot):** Sự kết hợp giữa mất cảm giác thần kinh, hẹp mạch máu nuôi chi dưới và nhiễm trùng, dễ hình thành vết loét hoại tử dẫn đến nguy cơ phải cắt cụt chi (đoạn chi).\n\n"
-            "#### 3. Biện pháp phòng ngừa và tầm soát định kỳ:\n"
-            "- Kiểm soát chặt chẽ chỉ số HbA1c < 7.0% và huyết áp mục tiêu < 130/80 mmHg.\n"
-            "- Xét nghiệm định kỳ eGFR và tỷ số Albumin/Creatinine niệu (uACR) mỗi 6–12 tháng.\n"
-            "- Soi đáy mắt định kỳ hàng năm và tự kiểm tra bàn chân mỗi ngày.\n"
+    # 2. BIẾN CHỨNG ĐÁI THÁO ĐƯỜNG
+    if any(k in lower_q for k in ["biến chứng", "hậu quả", "nguy hiểm", "mù", "loét", "cắt cụt", "đoạn chi", "dka", "hhs", "tai biến", "đột quỵ"]):
+        return (
+            "Biến chứng đái tháo đường típ 2 chia thành 2 nhóm chính:\n\n"
+            "### Biến chứng cấp tính\n"
+            "- **Hạ đường huyết (`< 70 mg/dL`):** Run tay, vã mồ hôi, có thể co giật hoặc hôn mê nếu dùng quá liều thuốc/insulin hoặc bỏ bữa.\n"
+            "- **Nhiễm toan ceton (`DKA`):** Đường huyết thường `> 250 mg/dL`, hơi thở mùi aceton, toan chuyển hóa, rối loạn điện giải.\n"
+            "- **Tăng áp lực thẩm thấu (`HHS`):** Glucose máu `> 600 mg/dL`, mất nước nặng, lơ mơ, nguy cơ tử vong cao ở người lớn tuổi.\n\n"
+            "### Biến chứng mạn tính\n"
+            "- **Thận:** Tiểu đạm vi thể tiến triển đến suy thận mạn.\n"
+            "- **Mắt:** Tổn thương vi mạch võng mạc, phù hoàng điểm, nguy cơ giảm thị lực hoặc mù lòa.\n"
+            "- **Thần kinh ngoại biên:** Tê bì, châm chích, mất cảm giác đau ở bàn chân.\n"
+            "- **Tim mạch & đột quỵ:** Tăng nguy cơ xơ vữa mạch, nhồi máu cơ tim và tai biến mạch máu não.\n"
+            "- **Bàn chân đái tháo đường:** Loét và nhiễm trùng khó lành, có thể dẫn tới đoạn chi.\n\n"
+            "### Tầm soát định kỳ\n"
+            "- Duy trì `HbA1c < 7.0%` và huyết áp `< 130/80 mmHg`.\n"
+            "- Kiểm tra `eGFR`, `uACR` mỗi 6–12 tháng; soi đáy mắt hàng năm và kiểm tra bàn chân mỗi ngày."
         )
 
-    # TRƯỜNG HỢP 3: NGUYÊN NHÂN & CƠ CHẾ BỆNH SINH
-    elif any(k in lower_q for k in ["nguyên nhân", "bệnh sinh", "cơ chế", "tại sao bị", "kháng insulin", "beta tụy", "yếu tố nguy cơ", "yếu tố di truyền"]):
-        bot_reply_blocks.append(
-            "### Nguyên Nhân & Cơ Chế Bệnh Sinh Đái Tháo Đường Típ 2\n"
-            "Theo tài liệu chuyên khoa Bệnh viện Vinmec và Hiệp hội ADA, đái tháo đường típ 2 là bệnh rối loạn chuyển hóa mạn tính đặc trưng bởi sự tăng glucose máu kéo dài do hai khiếm khuyết cơ bản phối hợp:\n\n"
-            "#### 1. Hai cơ chế bệnh sinh cốt lõi:\n"
-            "1. **Kháng Insulin (Insulin Resistance):**\n"
-            "   - Tuyến tụy vẫn sản xuất insulin (thậm chí tăng tiết bù trừ ở giai đoạn sớm), nhưng các tế bào đích tại gan, mô cơ xương và mô mỡ bị 'trơ', giảm đáp ứng sinh học với insulin.\n"
-            "   - Hậu quả: Gan không ngừng phóng thích glucose vào tuần hoàn, còn cơ bắp giảm thu nhận glucose, khiến lượng đường trong máu liên tục ở mức cao.\n"
-            "2. **Suy giảm tiến triển chức năng tế bào beta đảo tụy:**\n"
-            "   - Tình trạng tăng đường huyết và tăng acid béo tự do kéo dài gây hiện tượng ngộ độc đường (glucotoxicity) và ngộ độc mỡ (lipotoxicity).\n"
-            "   - Tế bào beta tụy bị kiệt quệ do phải làm việc bù trừ quá tải trong thời gian dài, dần dần suy giảm cả số lượng lẫn khả năng tiết insulin.\n\n"
-            "#### 2. Các yếu tố nguy cơ hàng đầu (Khuyến cáo sàng lọc Vinmec & Bộ Y tế):\n"
-            "- **Thừa cân, béo phì:** Chỉ số BMI $\\ge 23$ kg/m² (chuẩn người châu Á) hoặc béo bụng (vòng eo $\\ge 90$ cm ở nam, $\\ge 80$ cm ở nữ).\n"
-            "- **Lối sống tĩnh tại, ít vận động:** Giảm tiêu hao năng lượng và làm suy giảm độ nhạy insulin của cơ xương.\n"
-            "- **Tiền sử gia đình trực hệ:** Có bố, mẹ, anh chị em ruột mắc bệnh đái tháo đường típ 2.\n"
-            "- **Bệnh đồng mắc tim mạch - chuyển hóa:** Tăng huyết áp ($\\ge 140/90$ mmHg), rối loạn lipid máu (Triglyceride $> 2.8$ mmol/L, HDL-C $< 0.9$ mmol/L).\n"
-            "- **Tiền sử thai kỳ:** Từng mắc đái tháo đường thai kỳ hoặc sinh con nặng trên 4.0 kg.\n"
-            "- **Dấu gai đen (Acanthosis nigricans):** Vùng da sẫm màu, dày sừng ở nếp gấp cổ, nách là dấu hiệu lâm sàng chỉ báo kháng insulin nặng.\n"
+    # 3. NGUYÊN NHÂN & CƠ CHẾ BỆNH SINH
+    if any(k in lower_q for k in ["nguyên nhân", "bệnh sinh", "cơ chế", "tại sao bị", "kháng insulin", "beta tụy", "yếu tố nguy cơ", "yếu tố di truyền"]):
+        return (
+            "Đái tháo đường típ 2 hình thành từ hai cơ chế cốt lõi:\n\n"
+            "1. **Kháng insulin:** Tế bào gan, cơ xương và mô mỡ giảm đáp ứng với insulin; gan tiếp tục phóng thích glucose trong khi mô cơ giảm thu nhận đường.\n"
+            "2. **Suy giảm tế bào beta đảo tụy:** Tăng đường huyết và acid béo tự do kéo dài gây ngộ độc đường/mỡ, làm tế bào beta suy giảm dần khả năng tiết insulin.\n\n"
+            "### Yếu tố nguy cơ thường gặp\n"
+            "- **Thừa cân, béo phì:** `BMI >= 23 kg/m²` (người châu Á) hoặc vòng eo lớn (`>= 90 cm` ở nam, `>= 80 cm` ở nữ).\n"
+            "- **Ít vận động:** Giảm độ nhạy insulin của cơ xương.\n"
+            "- **Tiền sử gia đình:** Bố, mẹ hoặc anh chị em ruột mắc đái tháo đường.\n"
+            "- **Bệnh đồng mắc:** Tăng huyết áp (`>= 140/90 mmHg`), rối loạn lipid máu, tiền sử đái tháo đường thai kỳ.\n"
+            "- **Dấu gai đen:** Vùng da sẫm dày ở nếp gấp cổ, nách gợi ý kháng insulin."
         )
 
-    # TRƯỜNG HỢP 4: TRIỆU CHỨNG LÂM SÀNG ("HỘI CHỨNG 4 NHIỀU")
-    elif any(k in lower_q for k in ["4 nhiều", "triệu chứng", "dấu hiệu", "biểu hiện", "tiểu nhiều", "khát nước", "sụt cân", "mau đói", "cảnh báo"]):
-        bot_reply_blocks.append(
-            "### Triệu Chứng Lâm Sàng Kinh Điển & Hội Chứng 4 Nhiều\n"
-            "Cơ sở tri thức Bệnh viện Vinmec và Đồ thị tri thức (DB_diabet.cypher) mô tả chi tiết **Hội chứng 4 nhiều (Classic 4-P Symptoms)** đặc trưng của bệnh đái tháo đường:\n\n"
-            "1. **Tiểu nhiều (Polyuria):**\n"
-            "   - *Cơ chế sinh lý:* Khi nồng độ glucose máu vượt ngưỡng tái hấp thu của thận (ngưỡng thận $\\approx 180$ mg/dL), lượng đường dư thừa đào thải qua nước tiểu kéo theo phân tử nước theo cơ chế lợi niệu thẩm thấu.\n"
-            "   - *Biểu hiện:* Đi tiểu nhiều lần trong ngày, lượng nước tiểu tăng vọt (3–5 lít/ngày), đặc biệt phải thức giấc tiểu đêm liên tục.\n\n"
-            "2. **Khát nhiều (Polydipsia):**\n"
-            "   - *Cơ chế sinh lý:* Lượng nước mất lớn qua đường tiểu làm tăng độ thẩm thấu huyết tương, kích hoạt trực tiếp trung tâm khát tại vùng dưới đồi não bộ.\n"
-            "   - *Biểu hiện:* Miệng khô rát, liên tục khát nước dữ dội và uống nước rất nhiều nhưng vẫn không dứt cảm giác khát.\n\n"
-            "3. **Ăn nhiều (Polyphagia):**\n"
-            "   - *Cơ chế sinh lý:* Mặc dù đường trong máu cao, nhưng do kháng hoặc thiếu hụt insulin, tế bào không thể thu nhận glucose để tạo năng lượng ATP, dẫn đến trạng thái 'đói năng lượng ở cấp độ tế bào'.\n"
-            "   - *Biểu hiện:* Người bệnh mau đói, thèm ăn liên tục, đặc biệt là đồ ngọt và tinh bột.\n\n"
-            "4. **Sụt cân nhanh bất thường (Unexplained Weight Loss):**\n"
-            "   - *Cơ chế sinh lý:* Tế bào không thể sử dụng glucose buộc cơ thể phải kích hoạt con đường dị hóa, đốt cháy lipid từ mô mỡ và tiêu hủy protein từ cơ bắp để tạo năng lượng sống bù đắp.\n"
-            "   - *Biểu hiện:* Người bệnh ăn nhiều nhưng cân nặng giảm nhanh chóng từ 3–8 kg chỉ trong vài tuần.\n\n"
-            "#### Các triệu chứng cảnh báo đi kèm:\n"
-            "- **Mắt nhìn mờ:** Thay đổi độ cong và áp lực thẩm thấu trong thể thủy tinh.\n"
-            "- **Mệt mỏi suy nhược:** Tế bào thiếu hụt năng lượng nghiêm trọng.\n"
-            "- **Vết thương lâu lành:** Tăng đường huyết làm suy yếu hoạt động của bạch cầu và tuần hoàn mao mạch.\n"
-            "- **Tê bì, châm chích đầu chi:** Tổn thương sớm các sợi thần kinh cảm giác ngoại biên.\n"
+    # 4. TRIỆU CHỨNG LÂM SÀNG (HỘI CHỨNG 4 NHIỀU)
+    if any(k in lower_q for k in ["4 nhiều", "triệu chứng", "dấu hiệu", "biểu hiện", "tiểu nhiều", "khát nước", "sụt cân", "mau đói", "cảnh báo"]):
+        return (
+            "**Hội chứng 4 nhiều** là nhóm triệu chứng kinh điển của tăng đường huyết:\n\n"
+            "1. **Tiểu nhiều:** Khi glucose máu vượt ngưỡng thận (`~180 mg/dL`), đường dư thải qua nước tiểu kéo theo nước theo cơ chế lợi niệu thẩm thấu, gây tiểu đêm và lượng nước tiểu tăng (`3–5 lít/ngày`).\n"
+            "2. **Khát nhiều:** Mất nước làm tăng áp lực thẩm thấu huyết tương, kích thích trung tâm khát liên tục.\n"
+            "3. **Ăn nhiều:** Tế bào thiếu insulin không hấp thu được glucose để tạo năng lượng nên phát tín hiệu đói kéo dài.\n"
+            "4. **Sụt cân nhanh:** Cơ thể phải dị hóa mô mỡ và cơ bắp để bù năng lượng, gây giảm `3–8 kg` trong thời gian ngắn.\n\n"
+            "### Dấu hiệu đi kèm\n"
+            "- Mắt nhìn mờ tạm thời do thay đổi áp lực thẩm thấu thủy tinh thể.\n"
+            "- Mệt mỏi kéo dài, vết thương lâu lành, tê bì đầu ngón tay chân."
         )
 
-    # TRƯỜNG HỢP 5: TIÊU CHUẨN CHẨN ĐOÁN & CHỈ SỐ XÉT NGHIỆM VÀNG
-    elif any(k in lower_q for k in ["chẩn đoán", "tiêu chuẩn", "xét nghiệm", "chỉ số", "hba1c", "fpg", "ogtt", "đường huyết đói", "nghiệm pháp"]):
-        bot_reply_blocks.append(
-            "### Tiêu Chuẩn Chẩn Đoán Xác Định Đái Tháo Đường\n"
-            "Theo **Quyết định số 5481/QĐ-BYT** của Bộ Y tế Việt Nam và **Tiêu chuẩn ADA 2024**, chẩn đoán xác định đái tháo đường típ 2 dựa trên xét nghiệm máu tĩnh mạch thỏa mãn ít nhất **1 trong 4 tiêu chí** sau:\n\n"
-            "| Tiêu chí xét nghiệm | Ngưỡng chẩn đoán ĐTĐ | Ngưỡng Tiền ĐTĐ | Ngưỡng Bình thường | Điều kiện thực hiện |\n"
+    # 5. TIÊU CHUẨN CHẨN ĐOÁN & CHỈ SỐ XÉT NGHIỆM
+    if any(k in lower_q for k in ["chẩn đoán", "tiêu chuẩn", "xét nghiệm", "chỉ số", "hba1c", "fpg", "ogtt", "đường huyết đói", "nghiệm pháp"]):
+        return (
+            "Theo **Quyết định 5481/QĐ-BYT** và **ADA 2024**, chẩn đoán đái tháo đường khi thỏa mãn ít nhất **1 trong 4 tiêu chí** trên mẫu máu tĩnh mạch:\n\n"
+            "| Xét nghiệm | Đái tháo đường | Tiền đái tháo đường | Bình thường | Điều kiện |\n"
             "| :--- | :--- | :--- | :--- | :--- |\n"
-            "| **Đường huyết đói (FPG)** | $\\ge 126$ mg/dL ($\\ge 7.0$ mmol/L) | $100 - 125$ mg/dL | $< 100$ mg/dL ($< 5.6$ mmol/L) | Nhịn ăn ít nhất 8 giờ |\n"
-            "| **HbA1c** | $\\ge 6.5\\%$ ($48$ mmol/mol) | $5.7 - 6.4\\%$ | $< 5.7\\%$ | Phòng lab chuẩn hóa NGSP/DCCT |\n"
-            "| **Nghiệm pháp OGTT 2h** | $\\ge 200$ mg/dL ($\\ge 11.1$ mmol/L) | $140 - 199$ mg/dL | $< 140$ mg/dL ($< 7.8$ mmol/L) | Uống 75g glucose, đo sau 2h |\n"
-            "| **Glucose ngẫu nhiên** | $\\ge 200$ mg/dL ($\\ge 11.1$ mmol/L) | — | — | Kèm triệu chứng kinh điển 4 nhiều |\n\n"
-            "#### Quy định xác thực lâm sàng (Theo QĐ 5481/BYT):\n"
-            "- Nếu bệnh nhân **không có triệu chứng kinh điển** của tăng đường huyết cấp, cần làm lại xét nghiệm lần thứ hai (cùng phương pháp hoặc phương pháp khác) vào một ngày khác để khẳng định chẩn đoán.\n"
-            "- Không dùng máy đo đường huyết mao mạch cầm tay để chẩn đoán xác định bệnh (chỉ dùng để tự theo dõi điều trị tại nhà).\n\n"
-            "#### Mục tiêu kiểm soát đường huyết cá nhân hóa (ADA 2024):\n"
-            "- **HbA1c mục tiêu:** Chung cho đa số người trưởng thành là $< 7.0\\%$; ở người trẻ mới mắc có thể hướng tới $< 6.5\\%$; ở người cao tuổi nhiều bệnh nền có thể nới lỏng $< 8.0\\%$.\n"
-            "- **Chỉ số theo dõi CGM (Time in Range - TIR 70–180 mg/dL):** Cần duy trì $> 70\\%$ thời gian trong ngày.\n"
+            "| **Glucose đói (`FPG`)** | $\\ge 126$ mg/dL (`7.0 mmol/L`) | `100 – 125` mg/dL | `< 100` mg/dL | Nhịn ăn ít nhất 8 giờ |\n"
+            "| **`HbA1c`** | $\\ge 6.5\\%$ | `5.7 – 6.4%` | `< 5.7%` | Chuẩn hóa NGSP/DCCT |\n"
+            "| **`OGTT` sau 2 giờ** | $\\ge 200$ mg/dL (`11.1 mmol/L`) | `140 – 199` mg/dL | `< 140` mg/dL | Uống 75g glucose |\n"
+            "| **Glucose ngẫu nhiên** | $\\ge 200$ mg/dL | — | — | Kèm triệu chứng 4 nhiều |\n\n"
+            "### Lưu ý thực hành\n"
+            "- Nếu không có triệu chứng tăng đường huyết rõ, cần lặp lại xét nghiệm lần hai vào ngày khác để xác định.\n"
+            "- Không dùng máy đo đường huyết mao mạch cầm tay để chẩn đoán xác định.\n"
+            "- Mục tiêu kiểm soát phổ biến: `HbA1c < 7.0%`, `TIR (70–180 mg/dL) > 70%`."
         )
 
-    # TRƯỜNG HỢP 6: DƯỢC LÝ, METFORMIN & AN TOÀN THẬN (eGFR)
-    elif any(k in lower_q for k in ["metformin", "suy thận", "egfr", "thuốc", "dược lý", "uống thuốc", "chỉnh liều", "insulin", "sglt2", "empagliflozin", "dapagliflozin"]):
-        bot_reply_blocks.append(
-            "### Hướng Dẫn Dược Lý, Sử Dụng Metformin & An Toàn Chức Năng Thận\n"
-            "Theo **Quyết định 5481/QĐ-BYT** và **Cơ sở Tri thức Lâm sàng Vinmec**, việc sử dụng thuốc hạ đường huyết cần tuân thủ nghiêm ngặt chức năng lọc cầu thận (eGFR):\n\n"
-            "#### 1. Nguyên tắc sử dụng Metformin (Thuốc lựa chọn đầu tay - First-line):\n"
-            "- **Cơ chế tác dụng:** Giảm sản xuất glucose ở gan, tăng nhạy cảm của thụ thể insulin tại mô cơ và mô mỡ, không gây hạ đường huyết đơn độc và hỗ trợ kiểm soát cân nặng.\n"
-            "- **Liều dùng khởi đầu:** 500 mg hoặc 850 mg uống 1–2 lần/ngày trong hoặc ngay sau bữa ăn chính để giảm thiểu tác dụng phụ tiêu hóa (đầy bụng, buồn nôn, tiêu chảy).\n\n"
-            "#### 2. Bảng hiệu chỉnh liều Metformin bắt buộc theo mức lọc cầu thận (eGFR):\n"
-            "- **eGFR $\\ge 45$ mL/phút/1.73m² (Bình thường đến suy thận nhẹ độ 1-2, 3a):**\n"
-            "  * *Khuyến cáo:* An toàn sử dụng liều chuẩn đầy đủ (tối đa 2000 mg/ngày).\n"
-            "  * *Theo dõi:* Định kỳ kiểm tra chức năng thận eGFR mỗi năm 1 lần.\n"
-            "- **eGFR 30 - 44 mL/phút/1.73m² (Suy thận độ 3b):**\n"
-            "  * *Khuyến cáo:* **Bắt buộc giảm 50% liều tối đa** (tuyệt đối không dùng quá 1000 mg/ngày). Không khởi đầu dùng mới Metformin ở mốc này.\n"
-            "  * *Cảnh báo an toàn:* Bắt buộc theo dõi eGFR sát sao mỗi 3–6 tháng/lần vì tăng nguy cơ tích lũy thuốc dẫn đến biến chứng nhiễm toan acid lactic.\n"
-            "- **eGFR < 30 mL/phút/1.73m² (Suy thận nặng độ 4-5):**\n"
-            "  * *Khuyến cáo:* **CHỐNG CHỈ ĐỊNH TUYỆT ĐỐI Metformin**. Bắt buộc ngừng thuốc ngay lập tức!\n"
-            "  * *Nguy cơ:* Nhiễm toan acid lactic (Lactic Acidosis) có tỷ lệ tử vong lên tới 50%.\n"
-            "  * *Phác đồ thay thế:* Chuyển ngay sang liệu pháp Insulin hoặc các nhóm thuốc bài tiết qua gan.\n\n"
-            "#### 3. Các nhóm thuốc ưu tiên bảo vệ tim - thận:\n"
-            "- **Nhóm ức chế kênh SGLT2 (Empagliflozin, Dapagliflozin):** Tăng thải glucose qua nước tiểu, làm chậm tiến triển suy giảm eGFR và giảm biến cố suy tim, tử vong tim mạch.\n"
-            "- **Nhóm bảo vệ màng lọc cầu thận:** Ưu tiên thuốc ức chế men chuyển (ACEi) hoặc chẹn thụ thể ARB nếu bệnh nhân có tăng huyết áp hoặc có đạm niệu.\n"
+    # 6. DƯỢC LÝ, METFORMIN & AN TOÀN THẬN (eGFR)
+    if any(k in lower_q for k in ["metformin", "suy thận", "egfr", "thuốc", "dược lý", "uống thuốc", "chỉnh liều", "insulin", "sglt2", "empagliflozin", "dapagliflozin"]):
+        return (
+            "`Metformin` là thuốc lựa chọn đầu tay trong điều trị đái tháo đường típ 2, nhưng liều dùng bắt buộc phải điều chỉnh theo độ lọc cầu thận `eGFR`:\n\n"
+            "1. **`eGFR >= 45 mL/phút/1.73m²`:** Dùng liều tiêu chuẩn (tối đa `2000 mg/ngày`), theo dõi `eGFR` mỗi năm.\n"
+            "2. **`eGFR 30 – 44 mL/phút/1.73m²` (Suy thận độ 3b):** Giảm **50% liều tối đa** (không quá `1000 mg/ngày`), không khởi đầu mới ở ngưỡng này và kiểm tra `eGFR` mỗi `3–6` tháng.\n"
+            "3. **`eGFR < 30 mL/phút/1.73m²` (Suy thận độ 4–5):** **Chống chỉ định tuyệt đối** do nguy cơ nhiễm toan acid lactic; ngừng `Metformin` và chuyển sang `Insulin` hoặc thuốc thải trừ ngoài thận.\n\n"
+            "### Thuốc phối hợp bảo vệ tim – thận\n"
+            "- **Nhóm `SGLT2i` (`Empagliflozin`, `Dapagliflozin`):** Làm chậm suy giảm `eGFR` và giảm biến cố suy tim.\n"
+            "- **Nhóm `ACEi` / `ARB`:** Ưu tiên khi kèm tăng huyết áp hoặc albumin niệu."
         )
 
-    # TRƯỜNG HỢP 7: DINH DƯỠNG, TẬP LUYỆN & LỐI SỐNG (RL SIMULATION)
-    elif any(k in lower_q for k in ["dinh dưỡng", "ăn uống", "vận động", "tập luyện", "lối sống", "tinh bột", "thực đơn", "kiêng", "thể dục", "chế độ ăn"]):
+    # 7. DINH DƯỠNG, TẬP LUYỆN & LỐI SỐNG
+    if any(k in lower_q for k in ["dinh dưỡng", "ăn uống", "vận động", "tập luyện", "lối sống", "tinh bột", "thực đơn", "kiêng", "thể dục", "chế độ ăn"]):
         rl_res = coordinator.rl_agent.recommend_simulation_policy(peak_cgm=195.0, previous_compliance=0)
-        bot_reply_blocks.append(
-            "### Hướng Dẫn Can Thiệp Dinh Dưỡng, Vận Động & Tối Ưu Lối Sống\n"
-            "Theo tiêu chuẩn ADA 2024 kết hợp mô hình Học tăng cường (Reinforcement Learning - Q-Learning Bellman):\n\n"
-            "#### 1. Liệu pháp Dinh dưỡng Y khoa (Medical Nutrition Therapy - MNT):\n"
-            "- **Cắt giảm Carbohydrate hấp thu nhanh (GI cao):** Giảm 30–40% lượng tinh bột tinh chế (cơm trắng, bún, miến, bánh mì trắng, đồ ngọt, nước có gas) nhằm tránh làm tăng vọt glucose sau ăn.\n"
-            "- **Tăng cường Carbohydrate phức hợp & Chất xơ hòa tan:** Ưu tiên gạo lứt, yến mạch, các loại đậu, rau xanh lá đậm (bông cải, rau bina). Chất xơ làm chậm quá trình tiêu hóa và hấp thu đường vào máu.\n"
-            "- **Bổ sung Protein nạc:** Thịt ức gà, cá, trứng, đậu hũ giúp duy trì khối cơ và tạo cảm giác no lâu mà không làm tăng đường huyết.\n"
-            "- **Chất béo có lợi:** Dầu ô liu nguyên chất, quả bơ, hạt óc chó, hạnh nhân; hạn chế chất béo bão hòa từ mỡ động vật và phủ tạng.\n\n"
-            "#### 2. Chiến lược Vận động & Cơ chế Kích hoạt Kênh GLUT4:\n"
-            "- **Tổng lượng vận động khuyến nghị:** Tối thiểu 150 phút/tuần bài tập thể lực nhịp điệu cường độ trung bình (đi bộ nhanh, bơi lội, đạp xe), không nghỉ quá 2 ngày liên tiếp.\n"
-            "- **Chiến lược đi bộ sau ăn (Post-prandial walking):**\n"
-            "  * *Cơ chế sinh lý học:* Thực hiện đi bộ nhanh từ 20–30 phút sau bữa ăn chính từ 15–30 phút sẽ kích hoạt cơ chế vận chuyển glucose qua kênh thụ thể **GLUT4** trực tiếp vào tế bào cơ mà **không cần phụ thuộc vào insulin**.\n"
-            "  * *Hiệu quả:* Cắt giảm hiệu quả đỉnh đường huyết sau ăn, ngăn ngừa glucose vọt trên ngưỡng 180 mg/dL.\n\n"
-            "#### 3. Chính sách Tối ưu Bellman (Từ Mô hình Q-Learning):\n"
-            f"- **Chính sách lựa chọn:** `{rl_res.payload['action_description']}`\n"
-            f"- **Kế hoạch hành động cụ thể:**\n{rl_res.payload['detailed_plan']}\n"
+        return (
+            "### Dinh dưỡng y khoa\n"
+            "- Giảm `30–40%` tinh bột hấp thu nhanh (cơm trắng, bún, bánh mì trắng, đồ uống ngọt) để hạn chế đỉnh đường huyết sau ăn.\n"
+            "- Tăng chất xơ hòa tan và tinh bột phức hợp (gạo lứt, yến mạch, các loại đậu, rau xanh đậm).\n"
+            "- Bổ sung đạm nạc (cá, ức gà, trứng, đậu hũ) và chất béo không bão hòa (dầu ô liu, bơ, hạt).\n\n"
+            "### Vận động thể lực\n"
+            "- Duy trì tối thiểu `150 phút/tuần` vận động nhịp điệu cường độ trung bình, không nghỉ quá 2 ngày liên tiếp.\n"
+            "- **Đi bộ sau ăn 15–30 phút:** Kéo dài `20–30 phút` giúp kích hoạt kênh `GLUT4` đưa glucose vào cơ độc lập với insulin.\n\n"
+            "### Gợi ý từ mô hình mô phỏng RL\n"
+            f"- **{rl_res.payload['action_description']}**\n"
+            f"{rl_res.payload['detailed_plan']}"
         )
 
-    # TRƯỜNG HỢP 8: HẠ ĐƯỜNG HUYẾT & XỬ TRÍ CẤP CỨU
-    elif any(k in lower_q for k in ["hạ đường huyết", "tụt đường huyết", "cấp cứu", "run tay", "vã mồ hôi", "xỉu", "choáng", "đường huyết thấp"]):
-        bot_reply_blocks.append(
-            "### Hướng Dẫn Nhận Biết & Xử Trí Cấp Cứu Hạ Đường Huyết\n"
-            "Hạ đường huyết là tình trạng cấp cứu nguy hiểm thường gặp ở người bệnh điều trị bằng Insulin hoặc nhóm thuốc kích thích tiết insulin (Sulfonylureas):\n\n"
-            "#### 1. Định nghĩa & Dấu hiệu nhận biết:\n"
-            "- **Ngưỡng cảnh báo cấp cứu:** Nồng độ glucose máu $< 70$ mg/dL ($< 3.9$ mmol/L).\n"
-            "- **Triệu chứng sớm (Kích hoạt thần kinh giao cảm):** Run tay chân, vã mồ hôi lạnh, tim đập nhanh hồi hộp, cảm giác đói cồn cào, lo âu, bồn chồn.\n"
-            "- **Triệu chứng muộn (Thiếu glucose nuôi não):** Chóng mặt, hoa mắt, nhìn mờ, lú lẫn, nói nhảm, mất thăng bằng, co giật và hôn mê.\n\n"
-            "#### 2. Quy tắc Xử trí Cấp cứu '15 - 15' Chuẩn mực Y khoa:\n"
-            "- **Bước 1 (Nạp ngay 15g Carbohydrate tác dụng nhanh):** Cho bệnh nhân dùng ngay 1 trong các thực phẩm sau:\n"
-            "  * 1/2 ly nước ép trái cây ngọt hoặc nước ngọt có đường (khoảng 100–150 mL).\n"
-            "  * 3 thìa cà phê đường trắng hoặc mật ong pha với nửa cốc nước ấm.\n"
-            "  * 3–4 viên kẹo ngọt hoặc viên đường glucose chuyên dụng.\n"
-            "- **Bước 2 (Nghỉ ngơi 15 phút):** Cho bệnh nhân ngồi hoặc nằm nghỉ yên tĩnh, không hoạt động mạnh.\n"
-            "- **Bước 3 (Kiểm tra lại đường huyết sau 15 phút):**\n"
-            "  * Nếu đường huyết vẫn $< 70$ mg/dL: Tiếp tục lặp lại Bước 1 (nạp thêm 15g đường) và chờ thêm 15 phút.\n"
-            "  * Nếu đường huyết đã $\\ge 70$ mg/dL: Cho bệnh nhân ăn một bữa phụ nhẹ (bánh quy, sữa hạt) hoặc dùng bữa ăn chính nếu đã tới giờ để tránh đường huyết tụt trở lại.\n"
-            "- **Lưu ý đặc biệt:** Nếu bệnh nhân bất tỉnh, co giật hoặc không thể nuốt được, **tuyệt đối không cố đổ nước đường vào miệng** vì nguy cơ sặc vào đường thở. Phải đưa ngay đến phòng cấp cứu gần nhất hoặc tiêm Glucagon.\n"
+    # 8. HẠ ĐƯỜNG HUYẾT & XỬ TRÍ CẤP CỨU
+    if any(k in lower_q for k in ["hạ đường huyết", "tụt đường huyết", "cấp cứu", "run tay", "vã mồ hôi", "xỉu", "choáng", "đường huyết thấp"]):
+        return (
+            "Hạ đường huyết xảy ra khi glucose máu `< 70 mg/dL` (`< 3.9 mmol/L`), thường gặp ở người dùng `Insulin` hoặc `Sulfonylurea`.\n\n"
+            "### Dấu hiệu nhận biết\n"
+            "- **Sớm:** Run tay, vã mồ hôi lạnh, tim đập nhanh, đói cồn cào, lo âu.\n"
+            "- **Muộn:** Chóng mặt, nhìn mờ, lú lẫn, nói khó, co giật hoặc hôn mê.\n\n"
+            "### Quy tắc xử trí `15 - 15`\n"
+            "1. **Nạp ngay `15g` đường hấp thu nhanh:** `1/2` ly nước ép/nước ngọt có đường (`100–150 mL`), hoặc `3` thìa cà phê đường pha nước ấm, hoặc `3–4` viên kẹo ngọt.\n"
+            "2. **Nghỉ ngơi `15 phút`**, tránh vận động.\n"
+            "3. **Đo lại đường huyết:** Nếu vẫn `< 70 mg/dL`, lặp lại bước 1; khi đạt `>= 70 mg/dL`, ăn thêm bữa phụ nhẹ.\n\n"
+            "*Nếu người bệnh hôn mê hoặc không nuốt được, không đổ nước vào miệng mà cần cấp cứu y tế hoặc tiêm `Glucagon` ngay.*"
         )
 
-    # TRƯỜNG HỢP 9: TỔNG QUÁT / SMART GRAPHRAG SYNTHESIZER (TỔNG HỢP ĐẦY ĐỦ, KHÔNG CẮT CỤT)
+    # 9. TRUY XUẤT CHUNG (HYBRID GRAPHRAG)
+    parts = []
+    if graph_facts:
+        parts.append("**Liên kết tri thức liên quan:** " + " · ".join(f"`{f}`" for f in graph_facts[:3]))
+
+    if rag_results:
+        for chunk in rag_results[:2]:
+            src = chunk.get("source", "Tài liệu y khoa")
+            txt = chunk.get("text", "").strip()
+            parts.append(f"**{src}**\n> {txt}")
     else:
-        facts_summary = ", ".join(graph_facts[:3]) if graph_facts else "Đái tháo đường Típ 2, Kháng insulin, Tiêu chuẩn chẩn đoán"
+        parts.append("Không tìm thấy trích đoạn khớp trực tiếp trong kho dữ liệu; bạn có thể hỏi cụ thể về chẩn đoán, `Metformin`, biến chứng hoặc mã bệnh nhân (`BN001`–`BN003`).")
 
-        bot_reply_blocks.append(
-            f"### Kết Quả Phân Tích & Tra Cứu Tri Thức Lâm Sàng (Hybrid GraphRAG)\n"
-            f"Hệ thống đa tác tử đã phân tích câu hỏi **\"{chat_query}\"**, nhận diện các thực thể trên đồ thị tri thức Neo4j và tổng hợp từ cơ sở dữ liệu hướng dẫn y tế chính thức:\n\n"
-            f"#### 1. Tổng quan & Bản chất y khoa:\n"
-            f"- Đái tháo đường típ 2 là bệnh lý rối loạn chuyển hóa mạn tính liên quan mật thiết đến tình trạng kháng insulin và sự suy giảm tiến triển chức năng bài tiết insulin của tế bào beta tụy.\n"
-            f"- Các mắt xích tri thức liên quan được trích xuất từ đồ thị: `{facts_summary}`.\n\n"
-            f"#### 2. Dẫn chứng chuyên môn từ Tài liệu Hướng dẫn Lâm sàng:\n"
-        )
-        if rag_results:
-            for i, chunk in enumerate(rag_results[:2], 1):
-                bot_reply_blocks.append(
-                    f"**Trích đoạn {i} [{chunk.get('source', 'Tài liệu')} - Độ tương đồng Cosine: {chunk.get('similarity_score', 0.0):.3f}]:**\n"
-                    f"> \"{chunk.get('text', '').strip()}\"\n\n"
-                )
-        else:
-            bot_reply_blocks.append(
-                "> Thông tin truy vấn đã được đối chiếu toàn diện với cơ sở dữ liệu hướng dẫn chẩn đoán và điều trị đái tháo đường.\n\n"
-            )
+    return "\n\n".join(parts)
 
-        bot_reply_blocks.append(
-            "#### 3. Khuyến nghị ứng dụng lâm sàng:\n"
-            "- Đối chiếu chỉ số đường huyết định kỳ với các mốc chuẩn: Đường huyết đói $\\ge 126$ mg/dL, HbA1c $\\ge 6.5\\%$, OGTT 2h $\\ge 200$ mg/dL.\n"
-            "- Kết hợp chặt chẽ kiềng 3 chân: Dinh dưỡng giảm đường tinh chế + Vận động thể lực kích hoạt GLUT4 + Dược lý an toàn theo chức năng thận eGFR.\n\n"
-            "#### 4. Cảnh báo an toàn y khoa:\n"
-            "- Mọi thông tin do hệ thống đa tác tử cung cấp có tính chất hỗ trợ quyết định chuyên môn (Decision Support). Quyết định thay đổi thuốc hoặc chỉ định điều trị bắt buộc phải có sự thăm khám trực tiếp của bác sĩ chuyên khoa.\n"
-        )
 
-    # DẪN CHỨNG NGUỒN CHÍNH THỐNG (ĐÃ CẬP NHẬT URL CHUẨN, 100% KHÔNG 404)
-    bot_reply_blocks.append(
-        "\n---\n"
-        "**Nguồn dẫn chứng & Tài liệu chuyên môn chính thống:**\n"
-        "- **Bộ Y tế Việt Nam:** Quyết định số 5481/QĐ-BYT \"Hướng dẫn chẩn đoán và điều trị đái tháo đường típ 2\"\n"
-        "  * *Tra cứu trực tuyến:* [Cổng Thông tin Bộ Y tế](https://moh.gov.vn) • [Tìm kiếm Google](https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te)\n"
-        "- **Bệnh viện Đa khoa Quốc tế Vinmec:** Chuyên mục Đái tháo đường Típ 2 - Khoa Nội tiết Chuyển hóa\n"
-        "  * *Tra cứu trực tuyến:* [Trang chủ Vinmec](https://www.vinmec.com) • [Tìm kiếm Vinmec](https://www.vinmec.com/vi/tim-kiem/?q=ti%E1%BB%83u+%C4%91%C6%B0%E1%BB%9Dng)\n"
-        "- **Hiệp hội Đái tháo đường Hoa Kỳ:** ADA Standards of Care in Diabetes 2024\n"
-        "  * *Tra cứu trực tuyến:* [Tạp chí Diabetes Care](https://diabetesjournals.org/care/issue/47/Supplement_1) • [Trang chủ ADA](https://diabetes.org)\n"
-        "*(Lưu ý: Mọi tài liệu chuyên môn trên đều có toàn văn offline ngay trong hệ thống; bạn có thể mở rộng mục **'📚 Nguồn trích dẫn & Dữ liệu đối chiếu nội bộ'** bên dưới mỗi tin nhắn để xem toàn văn trích đoạn mà không cần mạng internet).* "
-    )
+def _render_gemini_sidebar_logo() -> str:
+    return """
+    <div class="gemini-brand">
+        <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+            <path d="M12 2C12.3 7.1 16.9 11.7 22 12C16.9 12.3 12.3 16.9 12 22C11.7 16.9 7.1 12.3 2 12C7.1 11.7 11.7 7.1 12 2Z" fill="url(#gemGrad)"/>
+            <defs>
+                <linearGradient id="gemGrad" x1="2" y1="2" x2="22" y2="22" gradientUnits="userSpaceOnUse">
+                    <stop offset="0%" stop-color="#4285F4"/>
+                    <stop offset="55%" stop-color="#9B72CB"/>
+                    <stop offset="100%" stop-color="#D96570"/>
+                </linearGradient>
+            </defs>
+        </svg>
+        <span class="gemini-brand-text">Trợ lý Tiểu đường</span>
+    </div>
+    """
 
-    return "".join(bot_reply_blocks)
+
+def _inject_gemini_styles(is_chat_view: bool):
+    import streamlit as st
+
+    max_w = "800px" if is_chat_view else "1120px"
+    bottom_pad = "6.5rem" if is_chat_view else "3rem"
+
+    st.markdown(f"""
+    <style>
+        /* Typography & base light surface */
+        html, body, [data-testid="stAppViewContainer"], [data-testid="stMain"] {{
+            background-color: #ffffff;
+            color: #1f1f1f;
+            font-family: "Google Sans", "Inter", -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+        }}
+
+        /* Hide noisy Streamlit top bar chrome while keeping sidebar toggle */
+        [data-testid="stDecoration"],
+        [data-testid="stAppDeployButton"],
+        [data-testid="stStatusWidget"],
+        #MainMenu,
+        footer {{
+            display: none !important;
+        }}
+        [data-testid="stHeader"] {{
+            background: transparent !important;
+            backdrop-filter: none !important;
+            border-bottom: none !important;
+            height: 3rem !important;
+            min-height: 3rem !important;
+            pointer-events: none;
+        }}
+        [data-testid="stExpandSidebarButton"] {{
+            pointer-events: auto;
+            background: rgba(255, 255, 255, 0.92) !important;
+            border-radius: 999px !important;
+        }}
+
+        /* Main container sizing */
+        .main .block-container,
+        [data-testid="stMainBlockContainer"] {{
+            max-width: {max_w};
+            padding-top: 4rem !important;
+            padding-bottom: {bottom_pad} !important;
+            padding-left: 1.5rem !important;
+            padding-right: 1.5rem !important;
+            margin: 0 auto;
+        }}
+
+        /* Gemini-style Left Sidebar */
+        [data-testid="stSidebar"] {{
+            background-color: #f0f4f9 !important;
+            border-right: none !important;
+        }}
+        [data-testid="stSidebarHeader"] {{
+            height: 3rem !important;
+            min-height: 3rem !important;
+            margin-bottom: 0.25rem !important;
+            padding: 0.5rem 0.65rem 0 0.65rem !important;
+        }}
+        [data-testid="stSidebarContent"] {{
+            padding-top: 0.25rem !important;
+            padding-left: 0.6rem;
+            padding-right: 0.6rem;
+        }}
+        [data-testid="stSidebarUserContent"] {{
+            padding-top: 0 !important;
+            padding-left: 0 !important;
+            padding-right: 0 !important;
+        }}
+        .gemini-brand {{
+            display: flex;
+            align-items: center;
+            gap: 0.55rem;
+            padding: 0.35rem 0.65rem 0.9rem 0.65rem;
+        }}
+        .gemini-brand-text {{
+            font-size: 1.15rem;
+            font-weight: 500;
+            color: #1f1f1f;
+            letter-spacing: -0.01em;
+        }}
+        .sidebar-section-label {{
+            font-size: 0.78rem;
+            font-weight: 500;
+            color: #444746;
+            padding: 0.65rem 0.85rem 0.25rem 0.85rem;
+            margin-top: 0.25rem;
+        }}
+        .sidebar-status-row {{
+            display: flex;
+            align-items: center;
+            gap: 0.45rem;
+            font-size: 0.8rem;
+            color: #444746;
+            padding: 0.35rem 0.4rem;
+        }}
+        .status-dot {{
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            flex-shrink: 0;
+        }}
+
+        /* Sidebar flat pill buttons */
+        [data-testid="stSidebar"] button[kind="tertiary"],
+        [data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"],
+        [data-testid="stSidebar"] button[kind="secondary"],
+        [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] {{
+            width: 100%;
+            justify-content: flex-start !important;
+            text-align: left !important;
+            border-radius: 999px !important;
+            border: none !important;
+            box-shadow: none !important;
+            padding: 0.42rem 0.85rem !important;
+            min-height: 36px !important;
+            font-size: 0.88rem !important;
+            line-height: 1.3 !important;
+            transition: background-color 0.15s ease;
+        }}
+        [data-testid="stSidebar"] button[kind="tertiary"],
+        [data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"] {{
+            background-color: transparent !important;
+            color: #1f1f1f !important;
+            font-weight: 400 !important;
+        }}
+        [data-testid="stSidebar"] button[kind="tertiary"]:hover,
+        [data-testid="stSidebar"] button[data-testid="stBaseButton-tertiary"]:hover {{
+            background-color: #e2e7ee !important;
+        }}
+        [data-testid="stSidebar"] button[kind="secondary"],
+        [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"] {{
+            background-color: #d3e3fd !important;
+            color: #041e49 !important;
+            font-weight: 500 !important;
+        }}
+        [data-testid="stSidebar"] button[kind="secondary"]:hover,
+        [data-testid="stSidebar"] button[data-testid="stBaseButton-secondary"]:hover {{
+            background-color: #c2d7fa !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:last-child button,
+        [data-testid="stSidebar"] [data-testid="stPopover"] button {{
+            justify-content: center !important;
+            padding: 0.25rem !important;
+            width: 32px !important;
+            min-width: 32px !important;
+            height: 32px !important;
+            min-height: 32px !important;
+            border-radius: 999px !important;
+            border: none !important;
+            background-color: transparent !important;
+            color: #444746 !important;
+        }}
+        [data-testid="stSidebar"] [data-testid="stHorizontalBlock"] > div:last-child button:hover,
+        [data-testid="stSidebar"] [data-testid="stPopover"] button:hover {{
+            background-color: #e2e7ee !important;
+            color: #1f1f1f !important;
+        }}
+        [data-testid="stSidebar"] button p {{
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }}
+        [data-testid="stSidebar"] hr {{
+            margin: 0.55rem 0.5rem;
+            border-color: #dde3ea;
+        }}
+
+        /* Main area buttons & subtle popovers */
+        [data-testid="stMain"] button[kind="primary"],
+        [data-testid="stMain"] button[data-testid="stBaseButton-primary"] {{
+            background-color: #1a73e8 !important;
+            color: #ffffff !important;
+            border: none !important;
+            border-radius: 999px !important;
+            font-weight: 500 !important;
+            padding: 0.45rem 1.25rem !important;
+        }}
+        [data-testid="stMain"] button[kind="primary"]:hover,
+        [data-testid="stMain"] button[data-testid="stBaseButton-primary"]:hover {{
+            background-color: #1557b0 !important;
+        }}
+        [data-testid="stMain"] button[kind="secondary"],
+        [data-testid="stMain"] button[data-testid="stBaseButton-secondary"] {{
+            background-color: #ffffff !important;
+            color: #1f1f1f !important;
+            border: 1px solid #dfe3e8 !important;
+            border-radius: 999px !important;
+            font-weight: 500 !important;
+        }}
+        [data-testid="stMain"] button[kind="secondary"]:hover,
+        [data-testid="stMain"] button[data-testid="stBaseButton-secondary"]:hover {{
+            background-color: #f0f4f9 !important;
+            border-color: #c4cdd5 !important;
+        }}
+        [data-testid="stMain"] [data-testid="stPopover"] button {{
+            border: none !important;
+            border-radius: 999px !important;
+            width: 36px !important;
+            height: 36px !important;
+            min-height: 36px !important;
+            padding: 0.25rem !important;
+            background-color: transparent !important;
+        }}
+        [data-testid="stMain"] [data-testid="stPopover"] button:hover {{
+            background-color: #f0f4f9 !important;
+        }}
+
+        /* Gemini Chat Canvas */
+        .gemini-greeting {{
+            text-align: center;
+            margin: 4.5rem auto 1.75rem auto;
+            max-width: 600px;
+        }}
+        .gemini-greeting h1 {{
+            font-size: 2.25rem;
+            font-weight: 500;
+            letter-spacing: -0.02em;
+            background: linear-gradient(90deg, #1a73e8 0%, #6b73e8 45%, #d96570 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0 0 0.5rem 0;
+        }}
+        .gemini-greeting p {{
+            font-size: 1rem;
+            color: #5f6368;
+            margin: 0;
+        }}
+
+        .gemini-user-row {{
+            display: flex;
+            justify-content: flex-end;
+            margin: 1.5rem 0 1rem 0;
+        }}
+        .gemini-user-bubble {{
+            background-color: #f0f4f9;
+            color: #1f1f1f;
+            border-radius: 24px 24px 6px 24px;
+            padding: 0.78rem 1.25rem;
+            max-width: 76%;
+            font-size: 0.98rem;
+            line-height: 1.55;
+            word-wrap: break-word;
+        }}
+
+        /* Assistant markdown styling matching Gemini Web */
+        [data-testid="stMain"] .stMarkdown {{
+            color: #1f1f1f;
+            font-size: 0.98rem;
+            line-height: 1.65;
+        }}
+        [data-testid="stMain"] .stMarkdown code {{
+            background-color: #f0f4f9;
+            color: #1f1f1f;
+            padding: 0.12rem 0.42rem;
+            border-radius: 6px;
+            font-size: 0.88em;
+        }}
+        [data-testid="stMain"] .stMarkdown pre code {{
+            background-color: transparent;
+            padding: 0;
+        }}
+        [data-testid="stMain"] .stMarkdown h3 {{
+            font-size: 1.18rem;
+            font-weight: 500;
+            color: #1f1f1f;
+            margin-top: 1.15rem;
+            margin-bottom: 0.5rem;
+        }}
+        [data-testid="stMain"] .stMarkdown h4 {{
+            font-size: 1.02rem;
+            font-weight: 600;
+            color: #1f1f1f;
+            margin-top: 0.9rem;
+            margin-bottom: 0.35rem;
+        }}
+
+        /* Clean minimal expanders */
+        [data-testid="stExpander"] {{
+            border: 1px solid #e7ebf0 !important;
+            border-radius: 12px !important;
+            background-color: #fafbfd !important;
+            margin-top: 0.4rem;
+            margin-bottom: 1rem;
+        }}
+        [data-testid="stExpander"] summary {{
+            font-size: 0.86rem !important;
+            color: #444746 !important;
+            font-weight: 500 !important;
+        }}
+
+        /* Floating Pill Chat Input at Bottom */
+        [data-testid="stBottom"] {{
+            background: linear-gradient(to top, #ffffff 82%, rgba(255, 255, 255, 0)) !important;
+            padding-top: 0.6rem !important;
+        }}
+        [data-testid="stBottomBlockContainer"] {{
+            max-width: 800px;
+            margin: 0 auto;
+            padding-top: 0.35rem;
+            padding-bottom: 0.45rem;
+        }}
+        [data-testid="stBottomBlockContainer"]::after {{
+            content: "Thông tin chỉ mang tính hỗ trợ quyết định y khoa, không thay thế chẩn đoán của bác sĩ.";
+            display: block;
+            text-align: center;
+            font-size: 0.75rem;
+            color: #5f6368;
+            margin-top: 0.45rem;
+        }}
+        [data-testid="stChatInput"] {{
+            background-color: #ffffff !important;
+            border: 1px solid #dfe3e8 !important;
+            border-radius: 28px !important;
+            box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06) !important;
+            padding: 0.25rem 0.55rem !important;
+        }}
+        [data-testid="stChatInput"]:focus-within {{
+            border-color: #a8c7fa !important;
+            box-shadow: 0 3px 16px rgba(26, 115, 232, 0.12) !important;
+        }}
+
+        /* Metric cards for clinical/analytics pages */
+        div[data-testid="stMetric"] {{
+            background-color: #f8fafd;
+            border: 1px solid #e7ebf0;
+            border-radius: 14px;
+            padding: 0.8rem 1rem;
+        }}
+        div[data-testid="stMetricLabel"] p {{
+            font-size: 0.82rem !important;
+            color: #5f6368 !important;
+            font-weight: 500;
+        }}
+        div[data-testid="stMetricValue"] {{
+            font-size: 1.45rem !important;
+            color: #1f1f1f !important;
+            font-weight: 500;
+        }}
+
+        /* Page titles for non-chat views */
+        .view-title {{
+            font-size: 1.45rem;
+            font-weight: 500;
+            color: #1f1f1f;
+            letter-spacing: -0.01em;
+            margin: 0 0 0.85rem 0;
+        }}
+    </style>
+    """, unsafe_allow_html=True)
 
 
 def run_streamlit_app():
     import streamlit as st
     import plotly.graph_objects as go
     import plotly.express as px
-    import streamlit.components.v1 as components
 
     st.set_page_config(
-        page_title="Hệ Thống Đa Tác Tử Hỗ Trợ Quyết Định Tiểu Đường | PTIT ISD",
+        page_title="Trợ lý Tiểu đường",
         layout="wide",
-        initial_sidebar_state="collapsed"
+        initial_sidebar_state="expanded"
     )
 
-    # Custom CSS - Giao diện chuyên nghiệp, chuẩn mực y khoa, không dùng icon/emoji thừa
-    st.markdown("""
-    <style>
-        [data-testid="stSidebar"], section[data-testid="stSidebar"], [data-testid="collapsedControl"] {
-            display: none !important;
-        }
-        .main .block-container {
-            padding-top: 0.8rem;
-            padding-bottom: 2rem;
-            padding-left: 2rem;
-            padding-right: 2rem;
-            max-width: 100%;
-        }
-        html, body, p, div, span, label {
-            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-        }
-
-        /* Metric cards */
-        div[data-testid="stMetric"] {
-            background-color: #ffffff;
-            border: 1px solid #e2e8f0;
-            border-radius: 8px;
-            padding: 0.75rem 1rem;
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.03);
-        }
-        div[data-testid="stMetricLabel"] p {
-            font-size: 0.88rem !important;
-            color: #64748b !important;
-            font-weight: 600;
-            text-transform: uppercase;
-            letter-spacing: 0.02em;
-        }
-        div[data-testid="stMetricValue"] {
-            font-size: 1.55rem !important;
-            color: #0f172a !important;
-            font-weight: 700;
-        }
-
-        /* Tabs styling */
-        .stTabs [data-baseweb="tab-list"] {
-            gap: 1.5rem;
-            border-bottom: 2px solid #e2e8f0;
-            margin-bottom: 1.1rem;
-        }
-        .stTabs [data-baseweb="tab"] {
-            height: 46px;
-            font-size: 1.02rem !important;
-            font-weight: 600;
-            color: #475569;
-            padding-left: 0.4rem;
-            padding-right: 0.4rem;
-        }
-        .stTabs [aria-selected="true"] {
-            color: #1e40af !important;
-            border-bottom-color: #1e40af !important;
-            font-weight: 700;
-        }
-
-        /* Button styling */
-        .stButton>button {
-            border-radius: 6px;
-            font-size: 0.95rem !important;
-            font-weight: 600;
-            padding: 0.5rem 1.2rem;
-        }
-        .stButton>button[kind="primary"] {
-            background-color: #1e40af;
-            border: none;
-        }
-        .stButton>button[kind="primary"]:hover {
-            background-color: #1d4ed8;
-        }
-    </style>
-    """, unsafe_allow_html=True)
-
-    # Khởi tạo tài nguyên hệ thống và Cache
     @st.cache_resource
     def load_system_core():
         init_database()
@@ -477,29 +687,14 @@ def run_streamlit_app():
         return kg, vstore, coord
 
     kg, vstore, coordinator = load_system_core()
-    orchestrator = coordinator # alias
 
-    # Khởi tạo session state
+    # Session state initialization
+    if "active_view" not in st.session_state:
+        st.session_state.active_view = "chat"
     if "selected_pid" not in st.session_state:
         st.session_state.selected_pid = "BN001"
     if "pending_chat" not in st.session_state:
         st.session_state.pending_chat = None
-
-    def create_default_welcome_message():
-        return {
-            "role": "assistant",
-            "content": (
-                "Xin chào! Tôi là **Trợ lý Tra cứu Tri thức Y tế & Hội chẩn Đa tác tử**.\n\n"
-                "Bạn có thể đặt câu hỏi hoặc yêu cầu tư vấn về:\n"
-                "- **Tiêu chuẩn chẩn đoán:** Đường huyết đói, HbA1c, OGTT theo QĐ 5481/BYT & ADA 2024.\n"
-                "- **Dược lý & Chỉnh liều:** Đánh giá an toàn và liều dùng Metformin theo mức lọc cầu thận eGFR.\n"
-                "- **Triệu chứng lâm sàng:** Cơ chế bệnh sinh của Hội chứng '4 nhiều' (Vinmec).\n"
-                "- **Dinh dưỡng & Vận động:** Mô phỏng thích nghi lối sống tối ưu hóa theo Reinforcement Learning.\n"
-                "- **Hội chẩn ca bệnh:** Tư vấn toàn diện hồ sơ (Ví dụ: `Hội chẩn BN001`, `BN002`, `BN003`)."
-            ),
-            "graph_facts": [],
-            "sources": []
-        }
 
     if "chat_sessions" not in st.session_state:
         legacy_msgs = st.session_state.get("chat_messages")
@@ -507,88 +702,289 @@ def run_streamlit_app():
         st.session_state.chat_sessions = [
             {
                 "id": first_sess_id,
-                "title": "Phiên tư vấn #1",
+                "title": "Cuộc trò chuyện mới",
                 "created_at": time.strftime("%H:%M - %d/%m"),
-                "messages": legacy_msgs if legacy_msgs else [create_default_welcome_message()]
+                "messages": legacy_msgs if legacy_msgs else []
             }
         ]
         st.session_state.current_session_id = first_sess_id
 
-    # Tự động chuẩn hóa và dọn dẹp các đường link lỗi thời (404) trong toàn bộ lịch sử hội thoại hiện hành
-    if "chat_sessions" in st.session_state:
+    # Normalize any legacy broken URLs inside stored chat history
+    for sess in st.session_state.chat_sessions:
+        for msg in sess.get("messages", []):
+            if isinstance(msg.get("content"), str):
+                for bad_url in [
+                    "https://www.vinmec.com/vi/benh/dai-thao-duong-type-2-4166/",
+                    "https://kcb.vn/van-ban/quyet-dinh-so-5481-qd-byt-ngay-30-12-2020-ve-viec-ban-hanh-tai-lieu-chuyen-mon-huong-dan-chan-doan-va-dieu-tri-dai-thao-duong-tip-2.html",
+                    "https://thuvienphapluat.vn/van-ban/The-thao-Y-te/Quyet-dinh-5481-QD-BYT-2020-tai-lieu-Huong-dan-chan-doan-va-dieu-tri-dai-thao-duong-tip-2-463283.aspx",
+                    "https://www.vinmec.com/vi/chuyen-khoa/noi-tiet-chuyen-hoa/"
+                ]:
+                    if bad_url in msg["content"]:
+                        if "vinmec" in bad_url:
+                            msg["content"] = msg["content"].replace(bad_url, "https://www.vinmec.com/vi/tim-kiem/?q=ti%E1%BB%83u+%C4%91%C6%B0%E1%BB%9Dng")
+                        else:
+                            msg["content"] = msg["content"].replace(bad_url, "https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te")
+            if msg.get("sources"):
+                for s in msg["sources"]:
+                    if isinstance(s.get("url"), str):
+                        if "4166" in s["url"] or "chuyen-khoa" in s["url"]:
+                            s["url"] = "https://www.vinmec.com/vi/tim-kiem/?q=ti%E1%BB%83u+%C4%91%C6%B0%E1%BB%9Dng"
+                        elif "kcb.vn" in s["url"] or "463283" in s["url"]:
+                            s["url"] = "https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te"
+
+    _inject_gemini_styles(is_chat_view=(st.session_state.active_view == "chat"))
+
+    # =========================================================================
+    # SIDEBAR (GEMINI WEB STYLE)
+    # =========================================================================
+    with st.sidebar:
+        st.markdown(_render_gemini_sidebar_logo(), unsafe_allow_html=True)
+
+        if st.button("Cuộc trò chuyện mới", icon=":material/edit_square:", type="tertiary", width="stretch", key="nav_new_chat"):
+            new_id = f"sess_{int(time.time() * 1000)}"
+            st.session_state.chat_sessions.insert(0, {
+                "id": new_id,
+                "title": "Cuộc trò chuyện mới",
+                "created_at": time.strftime("%H:%M - %d/%m"),
+                "messages": []
+            })
+            st.session_state.current_session_id = new_id
+            st.session_state.active_view = "chat"
+            st.session_state.pending_chat = None
+            st.rerun()
+
+        nav_items = [
+            ("consult", "Hội chẩn lâm sàng", ":material/stethoscope:"),
+            ("dl", "Học sâu & CGM", ":material/monitoring:"),
+            ("kg", "Đồ thị tri thức", ":material/hub:"),
+            ("rl", "Mô phỏng RL & CSDL", ":material/database:"),
+            ("docs", "Thư viện tài liệu", ":material/menu_book:"),
+        ]
+        for view_key, view_label, view_icon in nav_items:
+            is_cur_view = (st.session_state.active_view == view_key)
+            if st.button(
+                view_label,
+                icon=view_icon,
+                type="secondary" if is_cur_view else "tertiary",
+                width="stretch",
+                key=f"nav_{view_key}"
+            ):
+                st.session_state.active_view = view_key
+                st.rerun()
+
+        st.markdown("<hr>", unsafe_allow_html=True)
+        st.markdown('<div class="sidebar-section-label">Gần đây</div>', unsafe_allow_html=True)
+
         for sess in st.session_state.chat_sessions:
-            for msg in sess.get("messages", []):
-                if isinstance(msg.get("content"), str):
-                    for bad_url in [
-                        "https://www.vinmec.com/vi/benh/dai-thao-duong-type-2-4166/",
-                        "https://kcb.vn/van-ban/quyet-dinh-so-5481-qd-byt-ngay-30-12-2020-ve-viec-ban-hanh-tai-lieu-chuyen-mon-huong-dan-chan-doan-va-dieu-tri-dai-thao-duong-tip-2.html",
-                        "https://thuvienphapluat.vn/van-ban/The-thao-Y-te/Quyet-dinh-5481-QD-BYT-2020-tai-lieu-Huong-dan-chan-doan-va-dieu-tri-dai-thao-duong-tip-2-463283.aspx",
-                        "https://www.vinmec.com/vi/chuyen-khoa/noi-tiet-chuyen-hoa/"
-                    ]:
-                        if bad_url in msg["content"]:
-                            if "vinmec" in bad_url:
-                                msg["content"] = msg["content"].replace(bad_url, "https://www.vinmec.com/vi/tim-kiem/?q=ti%E1%BB%83u+%C4%91%C6%B0%E1%BB%9Dng")
-                            else:
-                                msg["content"] = msg["content"].replace(bad_url, "https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te")
-                if msg.get("sources"):
-                    for s in msg["sources"]:
-                        if isinstance(s.get("url"), str):
-                            if "4166" in s["url"] or "chuyen-khoa" in s["url"]:
-                                s["url"] = "https://www.vinmec.com/vi/tim-kiem/?q=ti%E1%BB%83u+%C4%91%C6%B0%E1%BB%9Dng"
-                            elif "kcb.vn" in s["url"] or "463283" in s["url"]:
-                                s["url"] = "https://www.google.com/search?q=Quyet+dinh+5481+QD-BYT+Bo+Y+te"
+            is_active_chat = (st.session_state.active_view == "chat" and sess["id"] == st.session_state.current_session_id)
+            disp_title = sess["title"]
+            if len(disp_title) > 26:
+                disp_title = disp_title[:24] + "..."
 
-    # HEADER CHUẨN MỰC Y KHOA
-    kg_badge_color = "#22c55e" if kg.neo4j_connected else "#f59e0b"
-    kg_badge_text = "Neo4j: Đã kết nối (Mặc định)" if kg.neo4j_connected else "Neo4j: Offline (Fallback NetworkX)"
-    st.markdown(f"""
-<div style="display: flex; justify-content: space-between; align-items: center; background: #0f172a; padding: 0.9rem 1.4rem; border-radius: 8px; color: white; margin-bottom: 0.9rem;">
-    <div>
-        <div style="font-size: 1.25rem; font-weight: 700; letter-spacing: -0.01em;">HỆ THỐNG ĐA TÁC TỬ HỖ TRỢ QUYẾT ĐỊNH ĐIỀU TRỊ TIỂU ĐƯỜNG</div>
-        <div style="font-size: 0.85rem; color: #94a3b8; margin-top: 0.2rem;">Clinical Decision Support System (CDSS) | GraphRAG, Deep Learning & Reinforcement Learning</div>
-    </div>
-    <div style="display: flex; gap: 0.6rem; align-items: center;">
-        <span style="background: #1e293b; color: {kg_badge_color}; border: 1px solid #334155; font-size: 0.82rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 4px;">{kg_badge_text}</span>
-        <span style="background: #1e293b; color: #38bdf8; border: 1px solid #334155; font-size: 0.82rem; font-weight: 600; padding: 0.25rem 0.65rem; border-radius: 4px;">8 Tác tử hoạt động</span>
-        <span style="background: #1e293b; color: #cbd5e1; border: 1px solid #334155; font-size: 0.82rem; font-weight: 500; padding: 0.25rem 0.65rem; border-radius: 4px;">PTIT ISD 2026</span>
-    </div>
-</div>
-""", unsafe_allow_html=True)
+            if len(st.session_state.chat_sessions) > 1:
+                c_sbtn, c_sdel = st.columns([5.2, 1], gap="small")
+                with c_sbtn:
+                    if st.button(
+                        disp_title,
+                        key=f"btn_sess_{sess['id']}",
+                        type="secondary" if is_active_chat else "tertiary",
+                        width="stretch",
+                        help=sess["title"]
+                    ):
+                        st.session_state.current_session_id = sess["id"]
+                        st.session_state.active_view = "chat"
+                        st.rerun()
+                with c_sdel:
+                    if st.button("", icon=":material/close:", key=f"del_sess_{sess['id']}", type="tertiary", help="Xóa cuộc trò chuyện"):
+                        st.session_state.chat_sessions = [s for s in st.session_state.chat_sessions if s["id"] != sess["id"]]
+                        if st.session_state.current_session_id == sess["id"]:
+                            st.session_state.current_session_id = st.session_state.chat_sessions[0]["id"]
+                        st.rerun()
+            else:
+                if st.button(
+                    disp_title,
+                    key=f"btn_sess_{sess['id']}",
+                    type="secondary" if is_active_chat else "tertiary",
+                    width="stretch",
+                    help=sess["title"]
+                ):
+                    st.session_state.current_session_id = sess["id"]
+                    st.session_state.active_view = "chat"
+                    st.rerun()
 
-    # Chi tiết 6 tầng kiến trúc thu gọn
-    with st.expander("Cấu trúc 6 tầng kiến trúc hệ thống (PTIT Architecture)", expanded=False):
-        st.markdown("""
-        - **Tầng 1 (Giao diện người dùng):** Web Dashboard tương tác & Terminal CLI tự động.
-        - **Tầng 2 (API & Xử lý dữ liệu - PatientDataAgent):** Kiểm thực định dạng, kiểm tra miền giá trị sinh lý y khoa.
-        - **Tầng 3 (Điều phối đa tác tử - CoordinatorAgent):** Thực thi quy trình tuần tự 12 bước logic và hợp đồng thông điệp $m_i$.
-        - **Tầng 4 (Tác tử chuyên môn):** DLPredictionAgent, RuleBasedAgent, KnowledgeRetrievalAgent, RLAgent, ExplanationAgent, MonitoringAgent.
-        - **Tầng 5 (Tri thức & Mô hình):** DNN 6 tầng, RNN dừng CGM, Neo4j DB_diabet.cypher và Vector RAG Cosine.
-        - **Tầng 6 (Đánh giá & Kiểm toán):** SQLite `agent_action_logs`, đo lường Groundedness, Hallucination Rate và Traceability.
-        """)
-
-    # 5 TABS CHÍNH
-    tab1, tab2, tab3, tab4, tab5 = st.tabs([
-        "Hội chẩn Lâm sàng",
-        "Trợ lý Tri thức Y tế",
-        "Mô hình Học sâu & CGM",
-        "Đồ thị Tri thức Neo4j",
-        "Mô phỏng RL & CSDL"
-    ])
+        st.markdown("<hr>", unsafe_allow_html=True)
+        dot_color = "#1e8e3e" if kg.neo4j_connected else "#f29900"
+        dot_label = "Neo4j đã kết nối" if kg.neo4j_connected else "NetworkX (dự phòng)"
+        c_stat, c_set = st.columns([4.5, 1])
+        with c_stat:
+            st.markdown(
+                f'<div class="sidebar-status-row"><span class="status-dot" style="background:{dot_color};"></span><span>{dot_label}</span></div>',
+                unsafe_allow_html=True
+            )
+        with c_set:
+            with st.popover("", icon=":material/settings:", type="tertiary", help="Tùy chọn"):
+                if st.button("Xóa toàn bộ cuộc trò chuyện", width="stretch", key="reset_all_chats"):
+                    fresh_id = f"sess_{int(time.time() * 1000)}"
+                    st.session_state.chat_sessions = [
+                        {
+                            "id": fresh_id,
+                            "title": "Cuộc trò chuyện mới",
+                            "created_at": time.strftime("%H:%M - %d/%m"),
+                            "messages": []
+                        }
+                    ]
+                    st.session_state.current_session_id = fresh_id
+                    st.session_state.active_view = "chat"
+                    st.rerun()
 
     # =========================================================================
-    # TAB 1: HỘI CHẨN ĐA TÁC TỬ
+    # VIEW 1: TRỢ LÝ HỘI THOẠI (GEMINI WEB CHAT)
     # =========================================================================
-    with tab1:
-        st.subheader("Hội Chẩn Đa Tác Tử (Clinical Decision Support)")
+    if st.session_state.active_view == "chat":
+        curr_sess = next(
+            (s for s in st.session_state.chat_sessions if s["id"] == st.session_state.current_session_id),
+            None
+        )
+        if not curr_sess:
+            curr_sess = st.session_state.chat_sessions[0]
+            st.session_state.current_session_id = curr_sess["id"]
 
-        input_mode = st.radio("Nguồn dữ liệu bệnh nhân:", ["Hồ sơ chuẩn từ CSDL SQLite", "Nhập ca bệnh tùy biến / Thử nghiệm lỗi xác thực"], horizontal=True)
+        # Minimal top action bar (chỉ giữ tiêu đề nhẹ khi đã có chat + menu ⋮)
+        c_top_l, c_top_r = st.columns([9, 1])
+        with c_top_l:
+            if curr_sess["messages"]:
+                st.caption(curr_sess["title"])
+        with c_top_r:
+            with st.popover("", icon=":material/more_vert:", type="tertiary", help="Tùy chọn cuộc trò chuyện"):
+                new_title_val = st.text_input("Đổi tên", value=curr_sess["title"], key=f"rename_input_{curr_sess['id']}")
+                if st.button("Lưu tên", width="stretch", key=f"save_title_{curr_sess['id']}"):
+                    if new_title_val.strip():
+                        curr_sess["title"] = new_title_val.strip()
+                        st.rerun()
+                if st.button("Làm mới cuộc trò chuyện", width="stretch", key=f"clear_msgs_{curr_sess['id']}"):
+                    curr_sess["messages"] = []
+                    curr_sess["title"] = "Cuộc trò chuyện mới"
+                    st.rerun()
+                export_json = json.dumps({
+                    "session_id": curr_sess["id"],
+                    "title": curr_sess["title"],
+                    "created_at": curr_sess.get("created_at"),
+                    "messages": curr_sess["messages"]
+                }, ensure_ascii=False, indent=2)
+                st.download_button(
+                    "Xuất JSON",
+                    data=export_json,
+                    file_name=f"{curr_sess['id']}.json",
+                    mime="application/json",
+                    width="stretch"
+                )
 
-        if "chuẩn" in input_mode:
+        # Empty state vs conversation history
+        if not curr_sess["messages"]:
+            st.markdown("""
+            <div class="gemini-greeting">
+                <h1>Xin chào</h1>
+                <p>Hỏi về tiêu chuẩn chẩn đoán, chỉnh liều Metformin theo eGFR, biến chứng hoặc hội chẩn ca bệnh.</p>
+            </div>
+            """, unsafe_allow_html=True)
+
+            q_prompts = [
+                ("Liều Metformin theo eGFR", "Tôi bị suy thận eGFR = 42 mL/phút, uống Metformin liều thế nào và có an toàn không?"),
+                ("Tiêu chuẩn chẩn đoán", "Tiêu chuẩn chẩn đoán xác định đái tháo đường theo QĐ 5481/BYT và ADA 2024?"),
+                ("Hội chứng 4 nhiều", "Hội chứng 4 nhiều và các triệu chứng cảnh báo đái tháo đường là gì?"),
+                ("Hội chẩn ca bệnh BN001", "Tư vấn phác đồ và đánh giá toàn diện cho bệnh nhân BN001"),
+            ]
+            cols_q = st.columns(4, gap="small")
+            for idx, (label, prompt_text) in enumerate(q_prompts):
+                with cols_q[idx]:
+                    if st.button(label, width="stretch", key=f"chip_{idx}"):
+                        st.session_state.pending_chat = prompt_text
+                        st.rerun()
+        else:
+            for msg in curr_sess["messages"]:
+                if msg["role"] == "user":
+                    safe_text = html.escape(msg["content"]).replace("\n", "<br>")
+                    st.markdown(
+                        f'<div class="gemini-user-row"><div class="gemini-user-bubble">{safe_text}</div></div>',
+                        unsafe_allow_html=True
+                    )
+                else:
+                    st.markdown(msg["content"])
+                    if msg.get("sources") or msg.get("graph_facts"):
+                        with st.expander("Nguồn tham khảo", expanded=False):
+                            c_kb, c_rag = st.columns(2)
+                            with c_kb:
+                                st.markdown("**Đồ thị tri thức**")
+                                if msg.get("graph_facts"):
+                                    for f in msg["graph_facts"]:
+                                        st.markdown(f"- `{f}`")
+                                else:
+                                    st.caption("Không có liên kết bổ sung.")
+                            with c_rag:
+                                st.markdown("**Tài liệu hướng dẫn**")
+                                if msg.get("sources"):
+                                    for s in msg["sources"]:
+                                        st.markdown(f"- **[{s['source']}]({s.get('url', '#')})** (`{s.get('similarity_score', 0.0):.3f}`)")
+                                        st.caption(f"{s.get('text', '')[:220]}...")
+                                else:
+                                    st.caption("Không có trích đoạn phù hợp.")
+
+        chat_input_val = st.chat_input("Hỏi về bệnh tiểu đường hoặc nhập mã bệnh nhân...", key="clinical_chat_input")
+        chat_query = chat_input_val or st.session_state.pending_chat
+        if st.session_state.pending_chat:
+            st.session_state.pending_chat = None
+
+        if chat_query:
+            curr_sess["messages"].append({"role": "user", "content": chat_query})
+
+            if curr_sess["title"] in ("Cuộc trò chuyện mới", "Phiên tư vấn #1") or curr_sess["title"].startswith("Phiên mới #"):
+                clean_first = chat_query.strip().split("\n")[0]
+                curr_sess["title"] = (clean_first[:28] + "...") if len(clean_first) > 30 else clean_first
+
+            with st.spinner("Đang tra cứu..."):
+                kg_res = coordinator.kg_agent.retrieve(chat_query)
+                rag_results = kg_res.payload["vector_chunks"]
+                graph_facts = [mh["chain_str"] for mh in kg_res.payload.get("multi_hop_facts", [])]
+
+                final_reply = generate_clinical_chat_response(
+                    chat_query=chat_query,
+                    coordinator=coordinator,
+                    kg_res=kg_res,
+                    rag_results=rag_results,
+                    graph_facts=graph_facts
+                )
+
+            curr_sess["messages"].append({
+                "role": "assistant",
+                "content": final_reply,
+                "graph_facts": graph_facts[:4],
+                "sources": rag_results
+            })
+            st.session_state.chat_messages = curr_sess["messages"]
+            st.rerun()
+
+    # =========================================================================
+    # VIEW 2: HỘI CHẨN LÂM SÀNG
+    # =========================================================================
+    elif st.session_state.active_view == "consult":
+        st.markdown('<div class="view-title">Hội chẩn lâm sàng</div>', unsafe_allow_html=True)
+
+        input_mode = st.segmented_control(
+            "Nguồn hồ sơ",
+            ["Hồ sơ có sẵn", "Nhập thông số tùy chỉnh"],
+            default="Hồ sơ có sẵn",
+            label_visibility="collapsed"
+        ) or "Hồ sơ có sẵn"
+
+        if input_mode == "Hồ sơ có sẵn":
             patients_list = get_all_patients()
-            p_options = {p["patient_id"]: f"{p['patient_id']} - {p['full_name']} (Tuổi: {p['age']}, BMI: {p['bmi']}, eGFR: {p['egfr']} mL/phút)" for p in patients_list}
+            p_options = {
+                p["patient_id"]: f"{p['patient_id']} — {p['full_name']} (Tuổi {p['age']}, BMI {p['bmi']}, eGFR {p['egfr']})"
+                for p in patients_list
+            }
 
             selected_pid = st.selectbox(
-                "Chọn hồ sơ bệnh nhân từ CSDL SQLite:",
+                "Hồ sơ bệnh nhân",
                 options=list(p_options.keys()),
                 format_func=lambda x: p_options[x],
                 index=list(p_options.keys()).index(st.session_state.selected_pid) if st.session_state.selected_pid in p_options else 0
@@ -596,7 +992,6 @@ def run_streamlit_app():
             st.session_state.selected_pid = selected_pid
             patient_obj = get_patient(selected_pid)
 
-            # Tính toán phân loại sinh lý lâm sàng
             p_glu = float(patient_obj.get("fasting_glucose", 0))
             p_hba1c = float(patient_obj.get("hba1c", 0))
             p_egfr = float(patient_obj.get("egfr", 0))
@@ -604,83 +999,56 @@ def run_streamlit_app():
             p_dia = float(patient_obj.get("diastolic_bp", 0))
             p_bmi = float(patient_obj.get("bmi", 0))
 
-            if p_glu >= 126:
-                tag_glu_text = "Ngưỡng ĐTĐ"
-            elif p_glu >= 100:
-                tag_glu_text = "Tiền ĐTĐ"
-            else:
-                tag_glu_text = "Bình thường"
-
-            if p_hba1c >= 6.5:
-                tag_hba1c_text = "Ngưỡng ĐTĐ"
-            elif p_hba1c >= 5.7:
-                tag_hba1c_text = "Tiền ĐTĐ"
-            else:
-                tag_hba1c_text = "Bình thường"
-
+            tag_glu_text = "Ngưỡng ĐTĐ" if p_glu >= 126 else ("Tiền ĐTĐ" if p_glu >= 100 else "Bình thường")
+            tag_hba1c_text = "Ngưỡng ĐTĐ" if p_hba1c >= 6.5 else ("Tiền ĐTĐ" if p_hba1c >= 5.7 else "Bình thường")
             if p_egfr < 30:
-                tag_egfr_text = "Suy thận nặng (Độ 4-5)"
+                tag_egfr_text = "Suy thận độ 4-5"
             elif p_egfr < 45:
-                tag_egfr_text = "Suy thận độ 3b (Cần giảm liều)"
+                tag_egfr_text = "Suy thận độ 3b"
             elif p_egfr < 60:
                 tag_egfr_text = "Suy thận độ 3a"
             else:
-                tag_egfr_text = "Chức năng thận tốt"
+                tag_egfr_text = "Bình thường"
+            tag_bp_text = "Tăng huyết áp" if (p_sys >= 140 or p_dia >= 90) else "Ổn định"
+            tag_bmi_text = "Béo phì" if p_bmi >= 30 else ("Thừa cân" if p_bmi >= 25 else "Bình thường")
 
-            if p_sys >= 140 or p_dia >= 90:
-                tag_bp_text = "Tăng HA Độ 1"
-            else:
-                tag_bp_text = "Huyết áp ổn định"
-
-            if p_bmi >= 30:
-                tag_bmi_text = "Béo phì độ 1"
-            elif p_bmi >= 25:
-                tag_bmi_text = "Thừa cân"
-            else:
-                tag_bmi_text = "Bình thường"
-
-            # Thẻ hồ sơ lâm sàng hiển thị hoàn toàn bằng widget Streamlit native (không dùng HTML thô)
             with st.container(border=True):
-                c_p1, c_p2 = st.columns([3, 1])
-                with c_p1:
-                    st.markdown(f"**Bệnh nhân:** {patient_obj['full_name']} | Mã BN: `{patient_obj['patient_id']}`")
-                    st.caption(f"Giới tính: {patient_obj['gender']} | Tuổi: {patient_obj['age']} | Tiền sử bệnh nền: {patient_obj['clinical_notes']}")
-                with c_p2:
-                    st.info(f"Thận: {tag_egfr_text}")
+                st.markdown(f"**{patient_obj['full_name']}** (`{patient_obj['patient_id']}`) · {patient_obj['gender']}, {patient_obj['age']} tuổi")
+                if patient_obj.get("clinical_notes"):
+                    st.caption(patient_obj["clinical_notes"])
 
                 col_v1, col_v2, col_v3, col_v4, col_v5 = st.columns(5)
                 col_v1.metric("Đường huyết đói", f"{patient_obj['fasting_glucose']} mg/dL", delta=tag_glu_text, delta_color="inverse" if "ĐTĐ" in tag_glu_text else "normal")
-                col_v2.metric("Chỉ số HbA1c", f"{patient_obj['hba1c']}%", delta=tag_hba1c_text, delta_color="inverse" if "ĐTĐ" in tag_hba1c_text else "normal")
-                col_v3.metric("Lọc thận eGFR", f"{patient_obj['egfr']} mL/phút", delta=tag_egfr_text, delta_color="inverse" if "Suy thận" in tag_egfr_text else "normal")
-                col_v4.metric("Huyết áp", f"{patient_obj['systolic_bp']}/{patient_obj['diastolic_bp']} mmHg", delta=tag_bp_text, delta_color="inverse" if "Tăng HA" in tag_bp_text else "normal")
-                col_v5.metric("Chỉ số BMI", f"{patient_obj['bmi']} kg/m²", delta=tag_bmi_text, delta_color="off")
+                col_v2.metric("HbA1c", f"{patient_obj['hba1c']}%", delta=tag_hba1c_text, delta_color="inverse" if "ĐTĐ" in tag_hba1c_text else "normal")
+                col_v3.metric("eGFR", f"{patient_obj['egfr']} mL/phút", delta=tag_egfr_text, delta_color="inverse" if "Suy thận" in tag_egfr_text else "normal")
+                col_v4.metric("Huyết áp", f"{patient_obj['systolic_bp']}/{patient_obj['diastolic_bp']} mmHg", delta=tag_bp_text, delta_color="inverse" if "Tăng" in tag_bp_text else "normal")
+                col_v5.metric("BMI", f"{patient_obj['bmi']} kg/m²", delta=tag_bmi_text, delta_color="off")
 
             default_queries = {
                 "BN001": "Tôi 58 tuổi, BMI 31.2, HbA1c 7.8%, đường huyết sáng nay là 192 mg/dL và bị suy thận (eGFR = 42 mL/phút). Tôi có dùng được Metformin nguyên liều không và cần ăn uống, tập luyện thế nào?",
                 "BN002": "Tôi 46 tuổi, HbA1c 6.1%, glucose đói 115 mg/dL. Tôi có bị đái tháo đường chưa và cần điều chỉnh lối sống ra sao?",
                 "BN003": "Tôi 67 tuổi, HbA1c 8.6%, glucose đói 210 mg/dL, suy thận nặng eGFR = 28 mL/phút. Tôi có dùng được Metformin không?"
             }
-            user_query_input = st.text_area("Yêu cầu / Câu hỏi lâm sàng:", value=default_queries.get(selected_pid, "Tư vấn phác đồ điều trị cho bệnh nhân."), height=75)
+            user_query_input = st.text_area("Câu hỏi lâm sàng", value=default_queries.get(selected_pid, "Tư vấn phác đồ điều trị."), height=76)
             target_patient_data = patient_obj
 
         else:
-            st.info("Nhập các thông số để kiểm thử khả năng xác thực dữ liệu của PatientDataAgent.")
             c_f1, c_f2, c_f3, c_f4 = st.columns(4)
             with c_f1:
-                in_pid = st.text_input("Mã BN:", value="CUSTOM_01")
-                in_age = st.number_input("Tuổi (năm):", value=55, min_value=-50, max_value=200)
-                in_gender = st.selectbox("Giới tính:", ["Nam", "Nữ"])
+                in_pid = st.text_input("Mã BN", value="CUSTOM_01")
+                in_age = st.number_input("Tuổi", value=55, min_value=-50, max_value=200)
+                in_gender = st.selectbox("Giới tính", ["Nam", "Nữ"])
             with c_f2:
-                in_bmi = st.number_input("BMI (kg/m²):", value=28.5, min_value=-10.0, max_value=100.0, step=0.1)
-                in_hba1c = st.number_input("HbA1c (%):", value=7.2, min_value=-5.0, max_value=40.0, step=0.1)
+                in_bmi = st.number_input("BMI (kg/m²)", value=28.5, min_value=-10.0, max_value=100.0, step=0.1)
+                in_hba1c = st.number_input("HbA1c (%)", value=7.2, min_value=-5.0, max_value=40.0, step=0.1)
             with c_f3:
-                in_glu = st.number_input("Glucose đói (mg/dL):", value=165.0, min_value=-100.0, max_value=5000.0, step=1.0)
-                in_egfr = st.number_input("eGFR (mL/phút):", value=38.0, min_value=-50.0, max_value=300.0, step=1.0)
+                in_glu = st.number_input("Glucose đói (mg/dL)", value=165.0, min_value=-100.0, max_value=5000.0, step=1.0)
+                in_egfr = st.number_input("eGFR (mL/phút)", value=38.0, min_value=-50.0, max_value=300.0, step=1.0)
             with c_f4:
-                in_sys = st.number_input("Huyết áp tâm thu:", value=140, min_value=-50, max_value=400)
-                in_dia = st.number_input("Huyết áp tâm trương:", value=85, min_value=-50, max_value=300)
+                in_sys = st.number_input("HA tâm thu (mmHg)", value=140, min_value=-50, max_value=400)
+                in_dia = st.number_input("HA tâm trương (mmHg)", value=85, min_value=-50, max_value=300)
 
-            user_query_input = st.text_area("Yêu cầu / Câu hỏi lâm sàng:", value="Tư vấn phác đồ điều trị và chỉnh liều thuốc.", height=70)
+            user_query_input = st.text_area("Câu hỏi lâm sàng", value="Tư vấn phác đồ điều trị và chỉnh liều thuốc.", height=76)
             target_patient_data = {
                 "patient_id": in_pid,
                 "full_name": f"Bệnh nhân {in_pid}",
@@ -695,301 +1063,76 @@ def run_streamlit_app():
                 "hypertension": 1 if in_sys >= 140 or in_dia >= 90 else 0,
                 "heart_disease": 0,
                 "smoking_history": "never",
-                "clinical_notes": "Hồ sơ nhập kiểm thử"
+                "clinical_notes": "Hồ sơ nhập tùy chỉnh"
             }
 
-        if st.button("Bắt đầu điều phối quy trình 12 bước (Coordinator Workflow)", type="primary", use_container_width=True):
-            with st.spinner("Coordinator Agent đang điều phối 8 tác tử tuần tự..."):
+        if st.button("Chạy hội chẩn", type="primary"):
+            with st.spinner("Đang điều phối các tác tử..."):
                 consult_res = coordinator.execute_workflow(target_patient_data, user_query=user_query_input)
 
-            # Xử lý trường hợp xác thực thất bại tại Bước 4 - 5
             if consult_res.get("status") == "error":
-                st.error("Xác thực dữ liệu thất bại: Coordinator Agent đã chấm dứt quy trình tại Bước 5 để đảm bảo an toàn lâm sàng.")
+                st.error("Dữ liệu đầu vào không hợp lệ. Quy trình đã dừng tại bước xác thực.")
                 st.markdown(consult_res["final_report"])
-                with st.expander("Xem vết thực thi đến thời điểm dừng", expanded=True):
+                with st.expander("Vết thực thi", expanded=True):
                     for step in consult_res.get("react_trace", []):
-                        st.markdown(f"- **[Bước {step['step']}] {step['phase']} - {step['agent']}:** {step['observation']}")
+                        st.markdown(f"- **[Bước {step['step']}] {step['agent']}:** {step['observation']}")
             else:
-                st.success(f"Hoàn tất quy trình hội chẩn đa tác tử 12 bước thành công trong {consult_res['latency_ms']} ms.")
-
-                # 4 Metrics lâm sàng quan trọng
+                st.caption(f"Hoàn tất trong `{consult_res['latency_ms']} ms`")
                 c1, c2, c3, c4 = st.columns(4)
-                c1.metric("Xác suất ĐTĐ Típ 2 (DNN)", f"{consult_res['dl_output']['risk_analysis']['risk_percentage']}%", delta=consult_res['dl_output']['risk_analysis']['risk_level'], delta_color="inverse" if "CAO" in consult_res['dl_output']['risk_analysis']['risk_level'] else "normal")
-                c2.metric("Đỉnh Đường huyết 4h (RNN)", f"{consult_res['dl_output']['cgm_forecast']['peak_glucose']} mg/dL", delta="Dự báo đỉnh")
-                c3.metric("Độ tin cậy dẫn chứng", f"{consult_res['groundedness_score']}%", delta="Groundedness")
-                c4.metric("Tỷ lệ ảo giác kiểm soát", f"{consult_res['hallucination_rate']}%", delta="Kiểm soát an toàn", delta_color="inverse")
+                c1.metric("Xác suất ĐTĐ (DNN)", f"{consult_res['dl_output']['risk_analysis']['risk_percentage']}%", delta=consult_res['dl_output']['risk_analysis']['risk_level'], delta_color="inverse" if "CAO" in consult_res['dl_output']['risk_analysis']['risk_level'] else "normal")
+                c2.metric("Đỉnh CGM 4h (RNN)", f"{consult_res['dl_output']['cgm_forecast']['peak_glucose']} mg/dL")
+                c3.metric("Groundedness", f"{consult_res['groundedness_score']}%")
+                c4.metric("Hallucination", f"{consult_res['hallucination_rate']}%")
 
-                # BÁO CÁO HỖ TRỢ QUYẾT ĐỊNH Y KHOA HIỂN THỊ NGAY ĐẦU
                 st.markdown(consult_res["final_report"])
 
-                # Vết 12 bước hiển thị bằng container native (không dùng HTML thô)
-                with st.expander("Chi tiết vết điều phối 12 bước & Hợp đồng thông điệp m_i", expanded=False):
+                with st.expander("Chi tiết quy trình 12 bước", expanded=False):
                     for step in consult_res["react_trace"]:
                         with st.container(border=True):
                             st.markdown(f"**[Bước {step['step']}] {step['phase']} — `{step['agent']}`**")
-                            st.markdown(f"- **Suy luận (Thought):** {step['thought']}")
-                            st.markdown(f"- **Hành động (Action):** `{step['action']}`")
-                            st.markdown(f"- **Quan sát (Observation):** {step['observation']}")
+                            st.markdown(f"- **Thought:** {step['thought']}")
+                            st.markdown(f"- **Action:** `{step['action']}`")
+                            st.markdown(f"- **Observation:** {step['observation']}")
                             if "message" in step:
-                                with st.expander(f"Hợp đồng thông điệp chuẩn hóa m_i của {step['agent']}"):
+                                with st.expander(f"Thông điệp m_i ({step['agent']})"):
                                     st.json(step["message"])
 
     # =========================================================================
-    # TAB 2: TRỢ LÝ TRA CỨU TRI THỨC (HYBRID GRAPHRAG)
+    # VIEW 3: MÔ HÌNH HỌC SÂU & DỰ BÁO CGM
     # =========================================================================
-    with tab2:
-        st.subheader("Trợ Lý Tra Cứu Tri Thức Y Tế (GraphRAG & Neo4j)")
-
-        # Phân chia bố cục: Cột trái (Quản lý phiên hội thoại) & Cột phải (Khung chat tương tác)
-        col_sess_list, col_sess_main = st.columns([1, 3.2], gap="medium")
-
-        # --- CỘT TRÁI: QUẢN LÝ PHIÊN HỘI THOẠI (CHAT SESSIONS) ---
-        with col_sess_list:
-            st.markdown("##### 📁 Quản lý phiên chat")
-            if st.button("➕ Tạo phiên mới", type="primary", use_container_width=True, key="btn_new_chat_session"):
-                new_id = f"sess_{int(time.time() * 1000)}"
-                st.session_state.chat_sessions.insert(0, {
-                    "id": new_id,
-                    "title": f"Phiên mới #{len(st.session_state.chat_sessions) + 1}",
-                    "created_at": time.strftime("%H:%M - %d/%m"),
-                    "messages": [create_default_welcome_message()]
-                })
-                st.session_state.current_session_id = new_id
-                st.session_state.pending_chat = None
-                st.rerun()
-
-            st.caption(f"Tổng số: **{len(st.session_state.chat_sessions)}** phiên hội thoại")
-
-            # Danh sách các phiên có vùng cuộn riêng, không đẩy trang web dài ra
-            with st.container(height=490):
-                for sess in st.session_state.chat_sessions:
-                    is_active = (sess["id"] == st.session_state.current_session_id)
-                    c_btn, c_del = st.columns([5, 1])
-                    with c_btn:
-                        btn_prefix = "🟢 " if is_active else "💬 "
-                        disp_title = sess["title"]
-                        if len(disp_title) > 24:
-                            disp_title = disp_title[:22] + "..."
-                        if st.button(
-                            f"{btn_prefix}{disp_title}",
-                            key=f"btn_sess_{sess['id']}",
-                            type="primary" if is_active else "secondary",
-                            use_container_width=True,
-                            help=f"{sess['title']} ({len(sess['messages'])} tin nhắn • Tạo lúc {sess.get('created_at', '')})"
-                        ):
-                            st.session_state.current_session_id = sess["id"]
-                            st.rerun()
-                        st.caption(f"{len(sess['messages'])} tin nhắn • {sess.get('created_at', '')}")
-                    with c_del:
-                        if len(st.session_state.chat_sessions) > 1:
-                            if st.button("✕", key=f"del_sess_{sess['id']}", help="Xóa phiên này"):
-                                st.session_state.chat_sessions = [s for s in st.session_state.chat_sessions if s["id"] != sess["id"]]
-                                if st.session_state.current_session_id == sess["id"]:
-                                    st.session_state.current_session_id = st.session_state.chat_sessions[0]["id"]
-                                st.rerun()
-
-            if len(st.session_state.chat_sessions) > 1:
-                if st.button("🧹 Đặt lại toàn bộ phiên", use_container_width=True, help="Khởi tạo lại danh sách phiên hội thoại về mặc định"):
-                    fresh_id = f"sess_{int(time.time() * 1000)}"
-                    st.session_state.chat_sessions = [
-                        {
-                            "id": fresh_id,
-                            "title": "Phiên tư vấn #1",
-                            "created_at": time.strftime("%H:%M - %d/%m"),
-                            "messages": [create_default_welcome_message()]
-                        }
-                    ]
-                    st.session_state.current_session_id = fresh_id
-                    st.rerun()
-
-        # --- CỘT PHẢI: KHUNG TRÒ CHUYỆN CỦA PHIÊN ĐANG CHỌN ---
-        with col_sess_main:
-            # Lấy thông tin phiên hiện tại
-            curr_sess = next(
-                (s for s in st.session_state.chat_sessions if s["id"] == st.session_state.current_session_id),
-                None
-            )
-            if not curr_sess:
-                curr_sess = st.session_state.chat_sessions[0]
-                st.session_state.current_session_id = curr_sess["id"]
-
-            # Thanh tiêu đề và tùy chọn phiên
-            c_header, c_tools = st.columns([2.4, 2.4])
-            with c_header:
-                st.markdown(f"##### 🩺 {curr_sess['title']}")
-                st.caption(f"Trạng thái: Đang hoạt động • {len(curr_sess['messages'])} tin nhắn • Tạo lúc: {curr_sess.get('created_at', 'Hôm nay')}")
-            with c_tools:
-                col_t_opt, col_t_docs = st.columns(2)
-                with col_t_opt:
-                    with st.popover("⚙️ Tùy chọn phiên"):
-                        new_title_val = st.text_input("Đổi tên phiên này:", value=curr_sess["title"], key=f"rename_input_{curr_sess['id']}")
-                        if st.button("Lưu tên mới", use_container_width=True, key=f"save_title_{curr_sess['id']}"):
-                            if new_title_val.strip():
-                                curr_sess["title"] = new_title_val.strip()
-                                st.rerun()
-                        if st.button("🧹 Làm sạch phiên này", use_container_width=True, key=f"clear_msgs_{curr_sess['id']}"):
-                            curr_sess["messages"] = [create_default_welcome_message()]
-                            st.rerun()
-                        export_json = json.dumps({
-                            "session_id": curr_sess["id"],
-                            "title": curr_sess["title"],
-                            "created_at": curr_sess.get("created_at"),
-                            "messages": curr_sess["messages"]
-                        }, ensure_ascii=False, indent=2)
-                        st.download_button("📥 Xuất dữ liệu phiên (.json)", data=export_json, file_name=f"{curr_sess['id']}.json", mime="application/json", use_container_width=True)
-
-                with col_t_docs:
-                    with st.popover("📖 Đọc tài liệu gốc (Offline)"):
-                        st.markdown("##### 📚 Thư viện văn bản gốc tích hợp sẵn:")
-                        doc_choice = st.selectbox(
-                            "Chọn tài liệu chuyên môn muốn xem:",
-                            [
-                                "Quyết định 5481/QĐ-BYT (Bộ Y tế)",
-                                "Tài liệu Chuyên khoa Vinmec",
-                                "ADA Standards of Care 2024"
-                            ],
-                            key=f"doc_select_{curr_sess['id']}"
-                        )
-                        doc_files = {
-                            "Quyết định 5481/QĐ-BYT (Bộ Y tế)": ("guidelines_byt_5481.txt", "Tài liệu chuyên môn Hướng dẫn chẩn đoán và điều trị đái tháo đường típ 2 - Bộ Y tế ban hành"),
-                            "Tài liệu Chuyên khoa Vinmec": ("vinmec_diabetes_article.txt", "Tài liệu Bệnh đái tháo đường típ 2 - Bệnh viện ĐKQT Vinmec"),
-                            "ADA Standards of Care 2024": ("guidelines_ada_2024.txt", "Tiêu chuẩn chăm sóc y khoa trong đái tháo đường 2024 - Hiệp hội Đái tháo đường Hoa Kỳ")
-                        }
-                        dfname, dfdesc = doc_files[doc_choice]
-                        dfpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", dfname)
-                        if os.path.exists(dfpath):
-                            with open(dfpath, "r", encoding="utf-8") as f:
-                                full_doc_text = f.read()
-                            st.caption(dfdesc)
-                            st.text_area("Toàn văn văn bản (100% Offline, không phụ thuộc mạng):", value=full_doc_text, height=280, disabled=True)
-                            st.download_button(f"📥 Tải tệp {dfname}", data=full_doc_text, file_name=dfname, mime="text/plain", use_container_width=True)
-
-            # Nút gợi ý câu hỏi tra cứu nhanh
-            st.markdown("**Gợi ý tra cứu nhanh:**")
-            col_q1, col_q2, col_q3, col_q4 = st.columns(4)
-            with col_q1:
-                if st.button("Liều Metformin theo eGFR", use_container_width=True, key="quick_q1"):
-                    st.session_state.pending_chat = "Tôi bị suy thận eGFR = 42 mL/phút, uống Metformin liều thế nào và có an toàn không?"
-                    st.rerun()
-            with col_q2:
-                if st.button("Tiêu chuẩn chẩn đoán ADA / BYT", use_container_width=True, key="quick_q2"):
-                    st.session_state.pending_chat = "Tiêu chuẩn chẩn đoán xác định đái tháo đường theo QĐ 5481/BYT và ADA 2024?"
-                    st.rerun()
-            with col_q3:
-                if st.button("Hội chứng 4 nhiều (Vinmec)", use_container_width=True, key="quick_q3"):
-                    st.session_state.pending_chat = "Hội chứng 4 nhiều và các triệu chứng cảnh báo đái tháo đường Vinmec là gì?"
-                    st.rerun()
-            with col_q4:
-                if st.button("Hội chẩn ca bệnh BN001", use_container_width=True, key="quick_q4"):
-                    st.session_state.pending_chat = "Tư vấn phác đồ và đánh giá toàn diện cho bệnh nhân BN001"
-                    st.rerun()
-
-            # Khung tin nhắn chat có chiều cao cố định, cuộn riêng biệt
-            # Giải quyết triệt để vấn đề: người dùng không phải kéo trang xuống dưới để chat mới!
-            with st.container(height=480):
-                for msg in curr_sess["messages"]:
-                    with st.chat_message(msg["role"]):
-                        st.markdown(msg["content"])
-                        if msg.get("sources") or msg.get("graph_facts"):
-                            with st.expander("📚 Nguồn trích dẫn & Dữ liệu đối chiếu nội bộ (Offline In-App RAG)"):
-                                c_kb, c_rag = st.columns(2)
-                                with c_kb:
-                                    st.markdown("##### Mắt xích Đồ thị Tri thức (Neo4j):")
-                                    if msg.get("graph_facts"):
-                                        for f in msg["graph_facts"]:
-                                            st.markdown(f"- `{f}`")
-                                    else:
-                                        st.caption("Không có thực thể xung đột bổ sung.")
-                                with c_rag:
-                                    st.markdown("##### Dẫn chứng Văn bản Hướng dẫn (Vector RAG):")
-                                    if msg.get("sources"):
-                                        for s in msg["sources"]:
-                                            st.markdown(f"- **[{s['source']}]({s.get('url', '#')})**")
-                                            st.caption(f"Tài liệu đối chiếu: `{s.get('pdf_ref', 'N/A')}` | Độ tương đồng: `{s.get('similarity_score', 0.0):.3f}`")
-                                            st.write(f"> \"{s.get('text', '')[:280]}...\"")
-                                    else:
-                                        st.caption("Dữ liệu tra cứu đã được đối chiếu thành công.")
-
-            # Khung nhập liệu chat đặt ngay dưới container cuộn tin nhắn
-            chat_input_val = st.chat_input("Nhập câu hỏi tra cứu hoặc yêu cầu hội chẩn (Ví dụ: eGFR = 42 uống Metformin liều thế nào?)...", key="clinical_chat_input")
-            chat_query = chat_input_val or st.session_state.pending_chat
-            if st.session_state.pending_chat:
-                st.session_state.pending_chat = None
-
-            if chat_query:
-                # 1. Thêm tin nhắn của User vào phiên hiện tại
-                curr_sess["messages"].append({"role": "user", "content": chat_query})
-
-                # Tự động cập nhật tiêu đề phiên nếu đang dùng tên mặc định
-                if curr_sess["title"].startswith("Phiên mới #") or curr_sess["title"].startswith("Phiên tư vấn #"):
-                    clean_first_line = chat_query.strip().split("\n")[0]
-                    if len(clean_first_line) > 30:
-                        curr_sess["title"] = clean_first_line[:28] + "..."
-                    else:
-                        curr_sess["title"] = clean_first_line
-
-                with st.spinner("Đang điều phối tác tử tra cứu tri thức y khoa..."):
-                    # Gọi trực tiếp KnowledgeRetrievalAgent (A_KG)
-                    kg_res = coordinator.kg_agent.retrieve(chat_query)
-                    rag_results = kg_res.payload["vector_chunks"]
-                    graph_facts = [mh["chain_str"] for mh in kg_res.payload.get("multi_hop_facts", [])]
-
-                    # Sử dụng Bộ tổng hợp tri thức lâm sàng đa tầng (Clinical Knowledge Synthesizer)
-                    final_reply = generate_clinical_chat_response(
-                        chat_query=chat_query,
-                        coordinator=coordinator,
-                        kg_res=kg_res,
-                        rag_results=rag_results,
-                        graph_facts=graph_facts
-                    )
-
-                curr_sess["messages"].append({
-                    "role": "assistant",
-                    "content": final_reply,
-                    "graph_facts": graph_facts[:4],
-                    "sources": rag_results
-                })
-                st.session_state.chat_messages = curr_sess["messages"]
-                st.rerun()
-
-    # =========================================================================
-    # TAB 3: TÍCH HỢP MÔ HÌNH HỌC SÂU (DL PREDICTION AGENT)
-    # =========================================================================
-    with tab3:
-        st.subheader("Mô Hình Học Sâu & Dự Báo CGM 4 Giờ")
+    elif st.session_state.active_view == "dl":
+        st.markdown('<div class="view-title">Mô hình Học sâu & Dự báo CGM</div>', unsafe_allow_html=True)
         meta = get_model_metadata()
 
-        # 5 Metrics hiệu năng gọn gàng ở đầu trang
         col_m1, col_m2, col_m3, col_m4, col_m5 = st.columns(5)
-        col_m1.metric("Độ chính xác (Accuracy)", f"{meta['evaluation_metrics']['accuracy']*100:.1f}%")
-        col_m2.metric("Điểm F1-Score", f"{meta['evaluation_metrics']['f1_score']*100:.1f}%")
+        col_m1.metric("Accuracy", f"{meta['evaluation_metrics']['accuracy']*100:.1f}%")
+        col_m2.metric("F1-Score", f"{meta['evaluation_metrics']['f1_score']*100:.1f}%")
         col_m3.metric("AUC-ROC", f"{meta['evaluation_metrics']['auc_roc']*100:.1f}%")
-        col_m4.metric("Độ nhạy (Sensitivity)", f"{meta['evaluation_metrics']['sensitivity_recall']*100:.1f}%")
-        col_m5.metric("Độ đặc hiệu (Specificity)", f"{meta['evaluation_metrics']['specificity']*100:.1f}%")
+        col_m4.metric("Sensitivity", f"{meta['evaluation_metrics']['sensitivity_recall']*100:.1f}%")
+        col_m5.metric("Specificity", f"{meta['evaluation_metrics']['specificity']*100:.1f}%")
 
-        with st.expander("Xem đặc tả kỹ thuật chi tiết của mô hình DL (7 Tiêu chí kiểm định)", expanded=False):
+        with st.expander("Đặc tả kỹ thuật mô hình", expanded=False):
             col_d1, col_d2 = st.columns(2)
             with col_d1:
-                st.markdown(f"**Phiên bản:** `{meta['model_version']}` | **Tên:** `{meta['model_name']}`")
-                st.markdown(f"**Kiến trúc DNN 6 tầng:** `{meta['model_architecture']['dnn_layers']}`")
-                st.markdown(f"**Kiến trúc RNN CGM:** `{meta['model_architecture']['cgm_rnn_architecture']}`")
-                st.markdown(f"**Bộ dữ liệu huấn luyện:** {meta['training_dataset']['source']} ({meta['training_dataset']['sample_size']:,} mẫu)")
+                st.markdown(f"**Phiên bản:** `{meta['model_version']}` · **Tên:** `{meta['model_name']}`")
+                st.markdown(f"**DNN 6 tầng:** `{meta['model_architecture']['dnn_layers']}`")
+                st.markdown(f"**RNN CGM:** `{meta['model_architecture']['cgm_rnn_architecture']}`")
             with col_d2:
-                st.markdown(f"**Phương pháp tiền xử lý:** {meta['preprocessing_method']['type']} (`{meta['preprocessing_method']['formula']}`)")
-                st.markdown(f"**Lưu ý an toàn lâm sàng:** {meta['clinical_limitation_notice']}")
+                st.markdown(f"**Dữ liệu huấn luyện:** {meta['training_dataset']['source']} ({meta['training_dataset']['sample_size']:,} mẫu)")
+                st.markdown(f"**Tiền xử lý:** {meta['preprocessing_method']['type']} (`{meta['preprocessing_method']['formula']}`)")
 
-        col_arch, col_acts = st.columns([1, 1])
+        col_arch, col_acts = st.columns([1.15, 1])
         with col_arch:
             st.markdown(r"""
-            ##### Cấu trúc Từng Tầng Hàm (Layer Composition)
-            | Tầng hàm | Ánh xạ | Biểu thức giải tích | Vai trò biểu diễn |
+            ##### Cấu trúc các tầng hàm
+            | Tầng | Ánh xạ | Biểu thức | Vai trò |
             | :--- | :--- | :--- | :--- |
-            | **Hàm $f_1$** | $\mathbb{R}^{15} \to \mathbb{R}^{64}$ | $h^{(1)} = \text{ReLU}(W_1 x + b_1)$ | Mở rộng không gian đặc trưng |
-            | **Hàm $f_2$** | $\mathbb{R}^{64} \to \mathbb{R}^{64}$ | $h^{(2)} = \text{ReLU}(W_2 h^{(1)} + b_2)$ | Tương tác phi tuyến bậc hai |
-            | **Hàm $f_3$** | $\mathbb{R}^{64} \to \mathbb{R}^{32}$ | $h^{(3)} = \text{ReLU}(W_3 h^{(2)} + b_3)$ | Nén đặc trưng sơ cấp |
-            | **Hàm $f_4$** | $\mathbb{R}^{32} \to \mathbb{R}^{16}$ | $h^{(4)} = \text{ReLU}(W_4 h^{(3)} + b_4)$ | Tinh lọc hội chứng chuyển hóa |
-            | **Hàm $f_5$** | $\mathbb{R}^{16} \to \mathbb{R}^{8}$ | $h^{(5)} = \text{ReLU}(W_5 h^{(4)} + b_5)$ | **Tầng nút thắt cổ chai (Bottleneck)** |
-            | **Hàm $f_6$** | $\mathbb{R}^{8} \to [0, 1]$ | $\hat{y} = \sigma(W_6 h^{(5)} + b_6)$ | Hàm quyết định Sigmoid |
+            | **$f_1$** | $\mathbb{R}^{15} \to \mathbb{R}^{64}$ | $\text{ReLU}(W_1 x + b_1)$ | Mở rộng đặc trưng |
+            | **$f_2$** | $\mathbb{R}^{64} \to \mathbb{R}^{64}$ | $\text{ReLU}(W_2 h^{(1)} + b_2)$ | Tương tác phi tuyến |
+            | **$f_3$** | $\mathbb{R}^{64} \to \mathbb{R}^{32}$ | $\text{ReLU}(W_3 h^{(2)} + b_3)$ | Nén sơ cấp |
+            | **$f_4$** | $\mathbb{R}^{32} \to \mathbb{R}^{16}$ | $\text{ReLU}(W_4 h^{(3)} + b_4)$ | Tinh lọc chuyển hóa |
+            | **$f_5$** | $\mathbb{R}^{16} \to \mathbb{R}^{8}$ | $\text{ReLU}(W_5 h^{(4)} + b_5)$ | Tầng Bottleneck |
+            | **$f_6$** | $\mathbb{R}^{8} \to [0, 1]$ | $\sigma(W_6 h^{(5)} + b_6)$ | Đầu ra Sigmoid |
             """)
 
         with col_acts:
@@ -999,13 +1142,13 @@ def run_streamlit_app():
             norm_feats = dl_spec.preprocessor.transform(raw_feats)
             y_hat, acts = dl_spec.dnn_model.forward_composition(norm_feats)
 
-            st.markdown(f"##### Biểu diễn Nén Bottleneck $h^{{(5)}}$ của **{p_curr['full_name']}**")
+            st.markdown(f"##### Bottleneck $h^{{(5)}}$ — {p_curr['full_name']}")
             b_df = pd.DataFrame([acts["h5_bottleneck"]], columns=[f"z_{i+1}" for i in range(8)])
-            st.dataframe(b_df.style.background_gradient(cmap="Blues", axis=1), use_container_width=True)
-            st.metric(rf"Xác suất suy luận $\hat{{y}} = f_6(h^{{(5)}})$", f"{y_hat * 100.0:.2f}%", delta="Rủi ro mắc ĐTĐ Típ 2")
+            st.dataframe(b_df.style.background_gradient(cmap="Blues", axis=1), width="stretch")
+            st.metric(r"Xác suất $\hat{y} = f_6(h^{(5)})$", f"{y_hat * 100.0:.2f}%")
 
         st.markdown("---")
-        st.subheader("Dự báo Chuỗi Đường huyết Liên tục CGM 4h (Stationary RNN)")
+        st.markdown("##### Dự báo đường huyết liên tục CGM 4 giờ tới")
 
         cgm_hist = get_cgm_stream(st.session_state.selected_pid)
         forecaster = RecurrentCGMForecaster()
@@ -1019,57 +1162,47 @@ def run_streamlit_app():
             x=hours_hist,
             y=cgm_hist,
             mode='lines+markers',
-            name='Lịch sử CGM 12h (Thực tế)',
-            line=dict(color='#1e40af', width=2.5),
-            marker=dict(size=6, color='#1e40af')
+            name='Lịch sử 12h',
+            line=dict(color='#1a73e8', width=2.5),
+            marker=dict(size=6, color='#1a73e8')
         ))
         fig_cgm.add_trace(go.Scatter(
             x=[hours_hist[-1]] + hours_fore,
             y=[cgm_hist[-1]] + cgm_pred_res["forecast_4h"],
             mode='lines+markers',
-            name='Dự báo RNN 4h tới',
-            line=dict(color='#b91c1c', width=2.5, dash='dash'),
-            marker=dict(size=6, color='#b91c1c')
+            name='Dự báo RNN 4h',
+            line=dict(color='#d93025', width=2.5, dash='dash'),
+            marker=dict(size=6, color='#d93025')
         ))
-
         fig_cgm.add_hrect(
             y0=70, y1=180,
-            fillcolor="rgba(34, 197, 94, 0.08)",
+            fillcolor="rgba(30, 142, 62, 0.08)",
             line_width=0,
-            annotation_text="Vùng mục tiêu an toàn (TIR: 70 - 180 mg/dL)",
+            annotation_text="Vùng mục tiêu (70–180 mg/dL)",
             annotation_position="top left",
-            annotation_font=dict(color="#15803d", size=12)
+            annotation_font=dict(color="#137333", size=12)
         )
-        fig_cgm.add_hline(y=180, line_dash="dot", line_color="#d97706", line_width=1.5, annotation_text="Ngưỡng tăng đường huyết (180 mg/dL)", annotation_font=dict(color="#b45309", size=11))
-        fig_cgm.add_hline(y=70, line_dash="dot", line_color="#dc2626", line_width=1.5, annotation_text="Ngưỡng hạ đường huyết cấp cứu (70 mg/dL)", annotation_font=dict(color="#b91c1c", size=11))
+        fig_cgm.add_hline(y=180, line_dash="dot", line_color="#e37400", line_width=1.5)
+        fig_cgm.add_hline(y=70, line_dash="dot", line_color="#d93025", line_width=1.5)
 
         fig_cgm.update_layout(
-            title=f"Đường biểu diễn dữ liệu CGM và Xu hướng dự báo ({p_curr['full_name']})",
-            xaxis_title="Thời gian tương đối",
-            yaxis_title="Nồng độ Glucose (mg/dL)",
+            title=f"CGM 12h & Dự báo 4h ({p_curr['full_name']})",
+            xaxis_title="Thời gian",
+            yaxis_title="Glucose (mg/dL)",
             template="plotly_white",
             height=380,
-            font=dict(size=12),
+            font=dict(size=12, color="#1f1f1f"),
             legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
         )
-        st.plotly_chart(fig_cgm, use_container_width=True)
+        st.plotly_chart(fig_cgm, width="stretch")
 
     # =========================================================================
-    # TAB 4: CƠ SỞ TRI THỨC NEO4J & DB_DIABET.CYPHER
+    # VIEW 4: ĐỒ THỊ TRI THỨC NEO4J
     # =========================================================================
-    with tab4:
-        st.subheader("Cơ Sở Tri Thức Đồ Thị Y Khoa Neo4j")
+    elif st.session_state.active_view == "kg":
+        st.markdown('<div class="view-title">Đồ thị tri thức y khoa</div>', unsafe_allow_html=True)
 
         g_summary = kg.get_graph_summary()
-        if g_summary["neo4j_connected"]:
-            st.success(f"Đang kết nối mặc định tới Neo4j tại `{g_summary['neo4j_uri']}` (Truy vấn Cypher trực tiếp).")
-        else:
-            st.warning(
-                f"Chưa kết nối được Neo4j tại `{g_summary['neo4j_uri']}` "
-                f"({g_summary.get('neo4j_error') or 'Neo4j server chưa chạy hoặc sai thông tin đăng nhập'}). "
-                "Hệ thống đang tạm chạy chế độ dự phòng NetworkX in-memory."
-            )
-
         if "neo4j_feedback" in st.session_state and st.session_state.neo4j_feedback:
             fb_level, fb_msg = st.session_state.pop("neo4j_feedback")
             if fb_level == "success":
@@ -1080,49 +1213,47 @@ def run_streamlit_app():
                 st.error(fb_msg)
 
         col_kg1, col_kg2, col_kg3 = st.columns(3)
-        col_kg1.metric("Nút Thực Thể (Entities)", g_summary["num_nodes"])
-        col_kg2.metric("Quan Hệ Ngữ Nghĩa (Relations)", g_summary["num_edges"])
-        col_kg3.metric("Backend Đồ Thị Đang Dùng", g_summary.get("backend", "Neo4j"))
+        col_kg1.metric("Thực thể", g_summary["num_nodes"])
+        col_kg2.metric("Quan hệ", g_summary["num_edges"])
+        col_kg3.metric("Backend", g_summary.get("backend", "Neo4j"))
 
-        # Cấu hình kết nối Neo4j (Mặc định tự động kết nối khi khởi chạy)
-        with st.expander("Cấu hình kết nối Neo4j (Mặc định hệ thống)", expanded=not g_summary["neo4j_connected"]):
+        if not g_summary["neo4j_connected"]:
+            st.caption(f"Chưa kết nối Neo4j (`{g_summary['neo4j_uri']}`); đang dùng NetworkX dự phòng.")
+
+        with st.expander("Cấu hình kết nối Neo4j", expanded=False):
             neo_col1, neo_col2 = st.columns([2, 1])
             with neo_col1:
-                neo_uri = st.text_input("Neo4j Bolt URI:", value=kg.neo4j_uri)
-                neo_user = st.text_input("Tên đăng nhập:", value=kg.neo4j_user)
-                neo_pass = st.text_input("Mật khẩu Neo4j:", value=kg.neo4j_password, type="password")
-                neo_db = st.text_input("Database (để trống = mặc định):", value=kg.neo4j_database or "")
+                neo_uri = st.text_input("Neo4j Bolt URI", value=kg.neo4j_uri)
+                neo_user = st.text_input("Tên đăng nhập", value=kg.neo4j_user)
+                neo_pass = st.text_input("Mật khẩu", value=kg.neo4j_password, type="password")
+                neo_db = st.text_input("Database", value=kg.neo4j_database or "")
             with neo_col2:
                 st.write("")
                 st.write("")
-                if st.button("Kết nối / Kiểm tra Neo4j", use_container_width=True):
+                if st.button("Kết nối / Kiểm tra", width="stretch"):
                     ok = kg.connect_neo4j(neo_uri, neo_user, neo_pass, database=neo_db.strip() or None)
                     if ok:
                         kg._ensure_neo4j_seeded("DB_diabet.cypher")
-                        st.session_state.neo4j_feedback = ("success", f"Kết nối Neo4j thành công tới {neo_uri}.")
+                        st.session_state.neo4j_feedback = ("success", f"Đã kết nối Neo4j tại {neo_uri}.")
                     else:
-                        st.session_state.neo4j_feedback = (
-                            "error",
-                            f"Không kết nối được Neo4j ({neo_uri}): {kg.neo4j_error}. Đang dùng NetworkX fallback.",
-                        )
+                        st.session_state.neo4j_feedback = ("error", f"Lỗi kết nối Neo4j ({neo_uri}): {kg.neo4j_error}.")
                     st.rerun()
-                if st.button("Nạp DB_diabet.cypher vào Neo4j", use_container_width=True):
+                if st.button("Nạp DB_diabet.cypher", width="stretch"):
                     ok_cypher = kg.init_neo4j_from_cypher_file("DB_diabet.cypher")
                     if ok_cypher:
-                        st.session_state.neo4j_feedback = ("success", "Nạp thành công DB_diabet.cypher vào Neo4j.")
+                        st.session_state.neo4j_feedback = ("success", "Đã nạp DB_diabet.cypher vào Neo4j.")
                         st.rerun()
                     else:
-                        st.warning("Vui lòng kết nối Neo4j trước khi nạp Cypher script.")
+                        st.warning("Cần kết nối Neo4j trước khi nạp Cypher.")
 
-        st.markdown("##### Trực quan hóa Đồ thị Tri thức Y tế Tương tác")
         graph_options = []
         if g_summary["neo4j_connected"]:
-            graph_options.append("Đồ thị Neo4j trực tiếp (Live Cypher)")
+            graph_options.append("Neo4j Live Cypher")
         graph_options.extend([
-            "Đồ thị y tế Vinmec Hospital (33 nút, 32 quan hệ)",
-            "Đồ thị y tế tiêu chuẩn (25 nút, 24 quan hệ)",
+            "Đồ thị Vinmec (33 nút)",
+            "Đồ thị tiêu chuẩn (25 nút)",
         ])
-        graph_choice = st.radio("Chọn nguồn đồ thị hiển thị:", graph_options, horizontal=True)
+        graph_choice = st.radio("Nguồn đồ thị", graph_options, horizontal=True)
 
         if "Live Cypher" in graph_choice:
             target_html = "neo4j_live_graph.html"
@@ -1137,31 +1268,28 @@ def run_streamlit_app():
         if os.path.exists(target_html):
             with open(target_html, "r", encoding="utf-8") as f:
                 html_content = f.read()
-            components.html(html_content, height=520, scrolling=True)
+            st.iframe(html_content, height=500)
 
         c_dl1, c_dl2 = st.columns(2)
         with c_dl1:
             json_file_path = os.path.join("data", "kg_graph.json")
             if os.path.exists(json_file_path):
                 with open(json_file_path, "r", encoding="utf-8") as f:
-                    json_data_str = f.read()
-                st.download_button("Tải xuống kg_graph.json", data=json_data_str, file_name="kg_graph.json", mime="application/json", use_container_width=True)
+                    st.download_button("Tải kg_graph.json", data=f.read(), file_name="kg_graph.json", mime="application/json", width="stretch")
         with c_dl2:
-            cypher_file_path = "DB_diabet.cypher"
-            if os.path.exists(cypher_file_path):
-                with open(cypher_file_path, "r", encoding="utf-8") as f:
-                    cypher_str = f.read()
-                st.download_button("Tải xuống DB_diabet.cypher", data=cypher_str, file_name="DB_diabet.cypher", mime="text/plain", use_container_width=True)
+            if os.path.exists("DB_diabet.cypher"):
+                with open("DB_diabet.cypher", "r", encoding="utf-8") as f:
+                    st.download_button("Tải DB_diabet.cypher", data=f.read(), file_name="DB_diabet.cypher", mime="text/plain", width="stretch")
 
         st.markdown("---")
-        st.markdown("##### Mô phỏng Duyệt Đồ thị Bắc cầu 2-Hop")
+        st.markdown("##### Duyệt đồ thị 2-Hop")
         c_hop1, c_hop2 = st.columns([1, 2])
         with c_hop1:
             node_options = g_summary.get("nodes") or list(kg.G.nodes())
-            selected_entity = st.selectbox("Chọn thực thể nguồn để duyệt 2-Hop:", options=node_options, index=0)
+            selected_entity = st.selectbox("Thực thể nguồn", options=node_options, index=0)
         with c_hop2:
             chains = kg.get_multi_hop_facts(selected_entity, max_hops=2)
-            st.write(f"Tìm thấy **{len(chains)}** đường dẫn quan hệ từ `{selected_entity}`:")
+            st.caption(f"{len(chains)} đường dẫn từ `{selected_entity}`")
             for ch in chains[:6]:
                 if ch["hops"] == 2:
                     st.markdown(f"- **2-Hop:** `{ch['source']}` $\\to$ *[{ch['rel1']}]* $\\to$ `{ch['intermediate']}` $\\to$ *[{ch['rel2']}]* $\\to$ `{ch['target']}`")
@@ -1169,90 +1297,104 @@ def run_streamlit_app():
                     st.markdown(f"- **1-Hop:** `{ch['source']}` $\\to$ *[{ch['rel1']}]* $\\to$ `{ch['target']}`")
 
     # =========================================================================
-    # TAB 5: MÔ PHỎNG RL & KIỂM TOÁN CSDL
+    # VIEW 5: MÔ PHỎNG RL & CSDL
     # =========================================================================
-    with tab5:
-        subtab_rl, subtab_db = st.tabs([
-            "Mô phỏng Q-Learning",
-            "Kiểm toán & CSDL SQLite"
-        ])
+    elif st.session_state.active_view == "rl":
+        st.markdown('<div class="view-title">Mô phỏng RL & Cơ sở dữ liệu</div>', unsafe_allow_html=True)
+
+        subtab_rl, subtab_db = st.tabs(["Mô phỏng Q-Learning", "Cơ sở dữ liệu SQLite"])
 
         with subtab_rl:
-            st.subheader("Mở Rộng Học Tăng Cường Trong Mô Phỏng (Q-Learning)")
-            st.markdown("""
-            <div style="background-color: #eff6ff; border-left: 4px solid #2563eb; padding: 0.75rem 1rem; border-radius: 0 6px 6px 0; margin-bottom: 0.9rem; font-size: 0.92rem; color: #1e3a8a;">
-                <strong>Ràng buộc an toàn:</strong> Tác tử RL vận hành độc quyền trong môi trường mô phỏng tổng hợp nhằm thử nghiệm chính sách theo dõi hoặc lựa chọn mô-đun giáo dục tuân thủ lối sống. Tuyệt đối không tự ý kê đơn hay thay đổi thuốc cho bệnh nhân thực tế.
-            </div>
-            """, unsafe_allow_html=True)
-
+            st.caption("Mô phỏng chính sách tuân thủ lối sống trên môi trường tổng hợp; không dùng để kê đơn thực tế.")
             col_qtable, col_compare = st.columns([1, 1])
+
             with col_qtable:
-                st.markdown("##### Bảng Q-Table Hội tụ của Q-Learning Agent (4 Trạng thái)")
+                st.markdown("##### Bảng Q-Table (4 trạng thái)")
                 rl_agent = coordinator.rl_agent.q_agent
 
-                if st.button("Huấn luyện lại Q-Learning trong mô phỏng (3,000 tập)", type="secondary"):
-                    with st.spinner("Đang chạy 60,000 bước cập nhật Bellman..."):
+                if st.button("Huấn luyện lại (3,000 tập)", type="secondary"):
+                    with st.spinner("Đang cập nhật Q-Table..."):
                         from train_models import train_rl_agent
                         new_agent = train_rl_agent(episodes=3000)
                         coordinator.rl_agent.q_agent = new_agent
                         rl_agent = new_agent
-                    st.success("Huấn luyện hội tụ thành công trong môi trường mô phỏng.")
+                    st.success("Hoàn tất huấn luyện.")
 
                 pol = rl_agent.get_optimal_policy()
-
                 q_data = []
                 for s_str, d in pol.items():
                     q_data.append({
-                        "Trạng thái s": s_str,
-                        "Diễn giải lâm sàng": d["state_desc"],
-                        "Q(s, 0) [Duy trì]": round(d["q_0"], 2),
-                        "Q(s, 1) [Can thiệp]": round(d["q_1"], 2),
-                        "Chính sách π*(s)": "Can thiệp" if d["best_action"] == 1 else "Duy trì",
-                        "Lần thăm": d["visits"]
+                        "Trạng thái": s_str,
+                        "Diễn giải": d["state_desc"],
+                        "Q(s,0)": round(d["q_0"], 2),
+                        "Q(s,1)": round(d["q_1"], 2),
+                        "Chính sách": "Can thiệp" if d["best_action"] == 1 else "Duy trì",
+                        "Lượt": d["visits"]
                     })
-                st.dataframe(pd.DataFrame(q_data), use_container_width=True)
+                st.dataframe(pd.DataFrame(q_data), width="stretch")
 
             with col_compare:
-                st.markdown("##### So sánh Khả năng Thích ứng Môi trường (10,000 Bước)")
+                st.markdown("##### So sánh thích ứng (10,000 bước)")
                 exp_data = {
-                    "Cấu hình môi trường": ["Môi trường chuẩn (δ = 0.20)", "Môi trường thay đổi (δ = 0.10)"],
-                    "Q-Learning Agent (RL)": [35.13, 32.07],
-                    "Rule-Based Agent (Luật tĩnh)": [34.75, 30.91]
+                    "Môi trường": ["Chuẩn (δ = 0.20)", "Thay đổi (δ = 0.10)"],
+                    "Q-Learning (RL)": [35.13, 32.07],
+                    "Luật tĩnh": [34.75, 30.91]
                 }
                 df_exp = pd.DataFrame(exp_data)
-
                 fig_bar = px.bar(
                     df_exp,
-                    x="Cấu hình môi trường",
-                    y=["Q-Learning Agent (RL)", "Rule-Based Agent (Luật tĩnh)"],
+                    x="Môi trường",
+                    y=["Q-Learning (RL)", "Luật tĩnh"],
                     barmode="group",
-                    title="Lợi ích sức khỏe kỳ vọng / Bước",
-                    labels={"value": "Điểm lợi ích sức khỏe", "variable": "Loại tác tử"},
-                    color_discrete_sequence=["#1e40af", "#94a3b8"]
+                    title="Lợi ích kỳ vọng / bước",
+                    labels={"value": "Điểm lợi ích", "variable": "Tác tử"},
+                    color_discrete_sequence=["#1a73e8", "#bdc1c6"]
                 )
-                fig_bar.update_layout(template="plotly_white", height=320, font=dict(size=12), legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1))
-                st.plotly_chart(fig_bar, use_container_width=True)
+                fig_bar.update_layout(
+                    template="plotly_white",
+                    height=320,
+                    font=dict(size=12, color="#1f1f1f"),
+                    legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1)
+                )
+                st.plotly_chart(fig_bar, width="stretch")
 
         with subtab_db:
-            st.subheader("Nhật Ký Kiểm Toán & Dữ Liệu CSDL SQLite")
-
             selected_table = st.radio(
-                "Chọn bảng dữ liệu cần xem:",
-                ["Nhật ký hành động tác tử (agent_action_logs)", "Hồ sơ bệnh nhân (patients)", "Luồng dữ liệu CGM 12h (cgm_telemetry_stream)"],
+                "Bảng dữ liệu",
+                ["agent_action_logs", "patients", "cgm_telemetry_stream"],
                 horizontal=True
             )
-
             conn = get_connection()
-            if "agent_action_logs" in selected_table:
+            if selected_table == "agent_action_logs":
                 df_data = pd.read_sql_query("SELECT * FROM agent_action_logs ORDER BY id DESC LIMIT 50", conn)
-            elif "patients" in selected_table:
+            elif selected_table == "patients":
                 df_data = pd.read_sql_query("SELECT * FROM patients", conn)
             else:
                 df_data = pd.read_sql_query("SELECT * FROM cgm_telemetry_stream ORDER BY id DESC LIMIT 50", conn)
             conn.close()
 
-            st.write(f"Hiển thị **{len(df_data)}** bản ghi gần nhất:")
-            st.dataframe(df_data, use_container_width=True)
+            st.caption(f"{len(df_data)} bản ghi")
+            st.dataframe(df_data, width="stretch")
+
+    # =========================================================================
+    # VIEW 6: THƯ VIỆN TÀI LIỆU
+    # =========================================================================
+    elif st.session_state.active_view == "docs":
+        st.markdown('<div class="view-title">Thư viện tài liệu y khoa</div>', unsafe_allow_html=True)
+
+        doc_files = {
+            "Quyết định 5481/QĐ-BYT (Bộ Y tế)": "guidelines_byt_5481.txt",
+            "Tài liệu chuyên khoa Vinmec": "vinmec_diabetes_article.txt",
+            "ADA Standards of Care 2024": "guidelines_ada_2024.txt"
+        }
+        doc_choice = st.selectbox("Tài liệu", list(doc_files.keys()), label_visibility="collapsed")
+        dfname = doc_files[doc_choice]
+        dfpath = os.path.join(os.path.dirname(os.path.abspath(__file__)), "data", dfname)
+        if os.path.exists(dfpath):
+            with open(dfpath, "r", encoding="utf-8") as f:
+                full_doc_text = f.read()
+            st.text_area("Nội dung", value=full_doc_text, height=440, disabled=True, label_visibility="collapsed")
+            st.download_button(f"Tải {dfname}", data=full_doc_text, file_name=dfname, mime="text/plain")
 
 
 # ĐIỂM VÀO CHƯƠNG TRÌNH CHÍNH
